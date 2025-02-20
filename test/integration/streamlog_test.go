@@ -13,9 +13,9 @@ import (
 
 var _ = Describe("Test/Integration/Streamlog", func() {
 	It("echoes multiple line from stdin", func() {
-		r, w := io.Pipe()
+		stdinReader, stdinWriter := io.Pipe()
 
-		session := runBin([]string{}, r)
+		session := runBin([]string{}, stdinReader)
 
 		Eventually(session.Err).Should(Say("Starting on http://localhost:"))
 
@@ -29,26 +29,26 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 
 		By("sending lines to stdin and checking stdout")
 
-		fmt.Fprintln(w, "some line from stdin")
+		fmt.Fprintln(stdinWriter, "some line from stdin")
 		Eventually(session).Should(Say("some line from stdin"))
 
-		fmt.Fprintln(w, "and another")
-		fmt.Fprintln(w, "line from stdin")
+		fmt.Fprintln(stdinWriter, "and another")
+		fmt.Fprintln(stdinWriter, "line from stdin")
 		Eventually(session).Should(Say("and another\nline from stdin"))
 
 		By("checking the response from the endpoint")
 		Eventually(BufferReader(resp.Body)).Should(Say("some line from stdin"))
 
 		By("terminating the process")
-		Expect(w.Close()).ShouldNot(HaveOccurred())
+		Expect(stdinWriter.Close()).ShouldNot(HaveOccurred())
 		session.Terminate()
 		Eventually(session).Should(gexec.Exit())
 	})
 
 	It("accepts port as parameter", func() {
-		r, _ := io.Pipe()
+		stdinReader, _ := io.Pipe()
 
-		session := runBin([]string{"--port", "32323"}, r)
+		session := runBin([]string{"--port", "32323"}, stdinReader)
 
 		Eventually(session.Err).Should(Say("Starting on http://localhost:32323"))
 
