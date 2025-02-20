@@ -37,6 +37,9 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(200))
 
+		By("checking the response from the endpoint")
+		Eventually(BufferReader(resp.Body)).Should(Say("some line from stdin"))
+
 		By("terminating the process")
 		Expect(w.Close()).ShouldNot(HaveOccurred())
 		session.Terminate()

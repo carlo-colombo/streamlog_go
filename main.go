@@ -9,15 +9,21 @@ import (
 )
 
 func main() {
+	logs := []string{}
+
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			fmt.Println(scanner.Text())
+			log := scanner.Text()
+			logs = append(logs, log)
+			fmt.Println(log)
 		}
 	}()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello World")
+		for _, log := range logs {
+			fmt.Fprintln(w, log)
+		}
 	})
 
 	listener, _ := net.Listen("tcp", ":0")
