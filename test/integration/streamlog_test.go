@@ -30,14 +30,17 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 		By("sending lines to stdin and checking stdout")
 
 		fmt.Fprintln(stdinWriter, "some line from stdin")
-		Eventually(session).Should(Say("some line from stdin"))
-
-		fmt.Fprintln(stdinWriter, "and another")
-		fmt.Fprintln(stdinWriter, "line from stdin")
-		Eventually(session).Should(Say("and another\nline from stdin"))
 
 		By("checking the response from the endpoint")
-		Eventually(BufferReader(resp.Body)).Should(Say("some line from stdin"))
+		bodyReader := BufferReader(resp.Body)
+		Eventually(bodyReader).Should(Say("some line from stdin"))
+
+		By("sending multiple lines to stdin and checking the response from the endpoint")
+		fmt.Fprintln(stdinWriter, "and another")
+		fmt.Fprintln(stdinWriter, "line from stdin")
+
+		Eventually(bodyReader).Should(Say("and another"))
+		Eventually(bodyReader).Should(Say("line from stdin"))
 
 		By("terminating the process")
 		Expect(stdinWriter.Close()).ShouldNot(HaveOccurred())
