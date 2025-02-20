@@ -12,7 +12,7 @@ import (
 )
 
 var _ = Describe("Test/Integration/Streamlog", func() {
-	It("echoes multiple line from stdin", func() {
+	It("starts, and forward stdin to http response", func() {
 		stdinReader, stdinWriter := io.Pipe()
 
 		session := runBin([]string{}, stdinReader)
