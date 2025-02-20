@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"net"
 	"net/http"
@@ -9,6 +10,9 @@ import (
 )
 
 func main() {
+	port := flag.String("port", "0", "port")
+	flag.Parse()
+
 	logs := make(chan string)
 
 	go func() {
@@ -30,7 +34,7 @@ func main() {
 		}
 	})
 
-	listener, _ := net.Listen("tcp", ":0")
+	listener, _ := net.Listen("tcp", fmt.Sprintf(":%s", *port))
 
 	fmt.Fprintf(os.Stderr, "Starting on http://localhost:%d\n", listener.Addr().(*net.TCPAddr).Port)
 

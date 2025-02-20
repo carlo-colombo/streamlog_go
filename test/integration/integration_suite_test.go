@@ -38,7 +38,7 @@ func TestIntegration(t *testing.T) {
 	RunSpecs(t, "Integration Suite")
 }
 
-func runBin(args []string, stdIn io.Reader, expErrCode int) (stdOut *bytes.Reader, stdErr *bytes.Reader, session *gexec.Session) {
+func runBin(args []string, stdIn io.Reader) (session *gexec.Session) {
 	stdOutBuffer := bytes.Buffer{}
 	stdErrBuffer := bytes.Buffer{}
 
@@ -47,5 +47,5 @@ func runBin(args []string, stdIn io.Reader, expErrCode int) (stdOut *bytes.Reade
 	session, err := gexec.Start(cmd, &stdOutBuffer, &stdErrBuffer)
 	Expect(err).ToNot(HaveOccurred())
 
-	return stdOut, stdErr, session
+	return session
 }

@@ -15,12 +15,13 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 	It("echoes multiple line from stdin", func() {
 		r, w := io.Pipe()
 
-		_, _, session := runBin([]string{}, r, 0)
+		session := runBin([]string{}, r)
 
 		Eventually(session.Err).Should(Say("Starting on http://localhost:"))
 
-		targetUrl, _ := strings.CutPrefix(string(session.Err.Contents()), "Starting on")
-		targetUrl = strings.TrimSpace(targetUrl)
+		targetUrl := getTargetUrl(session.Err)
+
+		By(fmt.Sprintf("retrieving lines from endpoint %s", targetUrl))
 
 		resp, err := http.Get(targetUrl)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -35,8 +36,6 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 		fmt.Fprintln(w, "line from stdin")
 		Eventually(session).Should(Say("and another\nline from stdin"))
 
-		By(fmt.Sprintf("retrieving lines from endpoint %s", targetUrl))
-
 		By("checking the response from the endpoint")
 		Eventually(BufferReader(resp.Body)).Should(Say("some line from stdin"))
 
@@ -45,4 +44,22 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 		session.Terminate()
 		Eventually(session).Should(gexec.Exit())
 	})
+
+	It("accepts port as parameter", func() {
+		r, _ := io.Pipe()
+
+		session := runBin([]string{"--port", "32323"}, r)
+
+		Eventually(session.Err).Should(Say("Starting on http://localhost:32323"))
+
+		resp, err := http.Get(getTargetUrl(session.Err))
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(200))
+	})
 })
+
+func getTargetUrl(err *Buffer) string {
+	targetUrl, _ := strings.CutPrefix(string(err.Contents()), "Starting on")
+	targetUrl = strings.TrimSpace(targetUrl)
+	return targetUrl
+}
