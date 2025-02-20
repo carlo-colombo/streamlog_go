@@ -1,6 +1,9 @@
 package integration_test
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -12,18 +15,21 @@ import (
 )
 
 var _ = Describe("Test/Integration/Streamlog", func() {
+	var session *gexec.Session
+	var stdinReader io.Reader
+	var stdinWriter *io.PipeWriter
+
 	It("starts, and forward stdin to http response", func() {
-		stdinReader, stdinWriter := io.Pipe()
+		stdinReader, stdinWriter = io.Pipe()
 
-		session := runBin([]string{}, stdinReader)
-
+		session = runBin([]string{}, stdinReader)
 		Eventually(session.Err).Should(Say("Starting on http://localhost:"))
 
 		targetUrl := getTargetUrl(session.Err)
 
 		By(fmt.Sprintf("retrieving lines from endpoint %s", targetUrl))
 
-		resp, err := http.Get(targetUrl)
+		resp, err := http.Get(targetUrl + "/logs")
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(200))
 
@@ -49,15 +55,58 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 	})
 
 	It("accepts port as parameter", func() {
-		stdinReader, _ := io.Pipe()
+		stdinReader, stdinWriter = io.Pipe()
 
-		session := runBin([]string{"--port", "32323"}, stdinReader)
+		session = runBin([]string{"--port", "32323"}, stdinReader)
 
 		Eventually(session.Err).Should(Say("Starting on http://localhost:32323"))
 
-		resp, err := http.Get(getTargetUrl(session.Err))
+		resp, err := http.Get(getTargetUrl(session.Err) + "/logs")
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(200))
+	})
+
+	Describe("the endpoint", func() {
+		It("returns JSON new line delimited body", func() {
+			stdinReader, stdinWriter = io.Pipe()
+
+			session = runBin([]string{}, stdinReader)
+
+			Eventually(session.Err).Should(Say("Starting on http://localhost:"))
+
+			targetUrl := getTargetUrl(session.Err)
+
+			By(fmt.Sprintf("retrieving lines from endpoint %s", targetUrl))
+
+			resp, err := http.Get(targetUrl + "/logs")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+
+			fmt.Fprintln(stdinWriter, "and another")
+			fmt.Fprintln(stdinWriter, "line from stdin")
+
+			scanner := bufio.NewScanner(resp.Body)
+
+			i := 0
+			for scanner.Scan() {
+				i++
+				result := make(map[string]interface{})
+				lineBuffer := bytes.NewBuffer(scanner.Bytes())
+				err := json.NewDecoder(lineBuffer).Decode(&result)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				if i == 2 {
+					resp.Body.Close()
+				}
+			}
+		})
+	})
+
+	AfterEach(func() {
+		By("terminating the process")
+		Expect(stdinWriter.Close()).ShouldNot(HaveOccurred())
+		session.Terminate()
+		Eventually(session).Should(gexec.Exit())
 	})
 })
 

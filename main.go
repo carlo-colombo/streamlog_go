@@ -2,12 +2,17 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 )
+
+type Log struct {
+	Line string `json:"line"`
+}
 
 func main() {
 	port := flag.String("port", "0", "port")
@@ -23,12 +28,15 @@ func main() {
 		}
 	}()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/logs", func(w http.ResponseWriter, r *http.Request) {
 		flusher, _ := w.(http.Flusher)
 		w.WriteHeader(http.StatusOK)
 		flusher.Flush()
+
+		encoder := json.NewEncoder(w)
+
 		for {
-			fmt.Fprintln(w, <-logs)
+			encoder.Encode(Log{<-logs})
 			flusher.Flush()
 		}
 	})
