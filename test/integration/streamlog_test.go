@@ -22,7 +22,11 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 		targetUrl, _ := strings.CutPrefix(string(session.Err.Contents()), "Starting on")
 		targetUrl = strings.TrimSpace(targetUrl)
 
-		By("sending lines to stdin")
+		resp, err := http.Get(targetUrl)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(200))
+
+		By("sending lines to stdin and checking stdout")
 
 		fmt.Fprintln(w, "some line from stdin")
 		Eventually(session).Should(Say("some line from stdin"))
@@ -32,10 +36,6 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 		Eventually(session).Should(Say("and another\nline from stdin"))
 
 		By(fmt.Sprintf("retrieving lines from endpoint %s", targetUrl))
-
-		resp, err := http.Get(targetUrl)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(resp.StatusCode).To(Equal(200))
 
 		By("checking the response from the endpoint")
 		Eventually(BufferReader(resp.Body)).Should(Say("some line from stdin"))

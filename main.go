@@ -9,20 +9,24 @@ import (
 )
 
 func main() {
-	logs := []string{}
+	logs := make(chan string)
 
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			log := scanner.Text()
-			logs = append(logs, log)
-			fmt.Println(log)
+			line := scanner.Text()
+			fmt.Println(line)
+			logs <- line
 		}
 	}()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		for _, log := range logs {
-			fmt.Fprintln(w, log)
+		flusher, _ := w.(http.Flusher)
+		w.WriteHeader(http.StatusOK)
+		flusher.Flush()
+		for {
+			fmt.Fprintln(w, <-logs)
+			flusher.Flush()
 		}
 	})
 
