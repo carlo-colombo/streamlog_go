@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
+	"net"
 	"net/http"
 	"os"
 )
@@ -20,6 +20,9 @@ func main() {
 		fmt.Fprintln(w, "Hello World")
 	})
 
-	fmt.Fprintln(os.Stderr, "Starting on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	listener, _ := net.Listen("tcp", ":0")
+
+	fmt.Fprintf(os.Stderr, "Starting on http://localhost:%d\n", listener.Addr().(*net.TCPAddr).Port)
+
+	panic(http.Serve(listener, nil))
 }
