@@ -5,14 +5,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/carlo-colombo/streamlog_go/log"
+	"github.com/carlo-colombo/streamlog_go/sse"
+	"io"
 	"net"
 	"net/http"
 	"os"
 )
-
-type Log struct {
-	Line string `json:"line"`
-}
 
 func main() {
 	port := flag.String("port", "0", "port")
@@ -33,10 +32,11 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		flusher.Flush()
 
-		encoder := json.NewEncoder(w)
+		encoder := newEncoder(w, r.URL.Query().Has("sse"))
 
 		for {
-			encoder.Encode(Log{<-logs})
+			log.Log{Line: <-logs}.Encode(encoder)
+
 			flusher.Flush()
 		}
 	})
@@ -46,4 +46,11 @@ func main() {
 	fmt.Fprintf(os.Stderr, "Starting on http://localhost:%d\n", listener.Addr().(*net.TCPAddr).Port)
 
 	panic(http.Serve(listener, nil))
+}
+
+func newEncoder(w io.Writer, isSSE bool) log.Encoder {
+	if isSSE {
+		return sse.NewEncoder(w)
+	}
+	return json.NewEncoder(w)
 }

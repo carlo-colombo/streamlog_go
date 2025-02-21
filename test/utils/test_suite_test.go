@@ -1,4 +1,4 @@
-package main_test
+package utils_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestStreamlogGo(t *testing.T) {
+func TestTest(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "StreamlogGo Suite")
+	RunSpecs(t, "Test Suite")
 }
