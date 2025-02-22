@@ -67,7 +67,7 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 		Expect(resp.StatusCode).To(Equal(200))
 	})
 
-	Describe("the endpoint", func() {
+	Describe("the logs endpoint", func() {
 		It("returns JSON new line delimited body", func() {
 			stdinReader, stdinWriter = io.Pipe()
 
@@ -115,7 +115,10 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 
 			resp, err := http.Get(targetUrl + "/logs?sse")
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(200))
+			Expect(resp).To(SatisfyAll(
+				HaveHTTPStatus(http.StatusOK),
+				HaveHTTPHeaderWithValue("Content-Type", "text/event-stream"),
+			))
 
 			_, _ = fmt.Fprintln(stdinWriter, "and another")
 			_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
@@ -136,7 +139,30 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 			}
 
 			Expect(events).To(ContainElements(
-				`data: and another`, `data: line from stdin`,
+				ContainSubstring(`and another`),
+				ContainSubstring(`line from stdin`),
+			))
+		})
+	})
+
+	Describe("the root endpoint", func() {
+		It("returns an index.html page", func() {
+			stdinReader, stdinWriter = io.Pipe()
+
+			session = runBin([]string{}, stdinReader)
+
+			Eventually(session.Err).Should(Say("Starting on http://localhost:"))
+
+			targetUrl := getTargetUrl(session.Err)
+
+			By(fmt.Sprintf("retrieving lines from endpoint %s", targetUrl))
+
+			resp, err := http.Get(targetUrl + "")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(resp).To(SatisfyAll(
+				HaveHTTPStatus(http.StatusOK),
+				HaveHTTPHeaderWithValue("Content-Type", "text/html"),
 			))
 		})
 	})

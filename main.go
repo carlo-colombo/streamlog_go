@@ -2,16 +2,24 @@ package main
 
 import (
 	"bufio"
+	"embed"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/carlo-colombo/streamlog_go/log"
 	"github.com/carlo-colombo/streamlog_go/sse"
+	"html/template"
 	"io"
 	"net"
 	"net/http"
 	"os"
 )
+
+//go:embed templates
+var templates embed.FS
+
+//go:embed templates/log.html
+var logTmpl embed.FS
 
 func main() {
 	port := flag.String("port", "0", "port")
@@ -27,12 +35,29 @@ func main() {
 		}
 	}()
 
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+
+		tmpl, _ := template.ParseFS(templates, "templates/index.html")
+
+		var q struct{}
+		tmpl.Execute(w, q)
+	})
+
 	http.HandleFunc("/logs", func(w http.ResponseWriter, r *http.Request) {
 		flusher, _ := w.(http.Flusher)
+
+		isSSE := r.URL.Query().Has("sse")
+		if isSSE {
+			w.Header().Set("Content-Type", "text/event-stream")
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+		}
 		w.WriteHeader(http.StatusOK)
 		flusher.Flush()
 
-		encoder := newEncoder(w, r.URL.Query().Has("sse"))
+		encoder := newEncoder(w, isSSE)
 
 		for {
 			log.Log{Line: <-logs}.Encode(encoder)
@@ -50,7 +75,8 @@ func main() {
 
 func newEncoder(w io.Writer, isSSE bool) log.Encoder {
 	if isSSE {
-		return sse.NewEncoder(w)
+		data, _ := templates.ReadFile("templates/log.html")
+		return sse.NewEncoder(w, string(data))
 	}
 	return json.NewEncoder(w)
 }

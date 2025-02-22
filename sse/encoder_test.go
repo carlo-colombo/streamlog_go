@@ -9,18 +9,23 @@ import (
 )
 
 var _ = Describe("Sse/Encoder", func() {
+
+	lineTemplate := `<l>
+  {{- .Line}}
+</l>`
+
 	It("encodes a single event", func() {
 		buffer := gbytes.NewBuffer()
-		e := sse.NewEncoder(buffer)
+		e := sse.NewEncoder(buffer, lineTemplate)
 
 		Expect(e).ToNot(BeNil())
 
 		e.Encode(log.Log{Line: "foobar"})
 
-		Eventually(buffer).Should(gbytes.Say("data: foobar\n\n"))
+		Eventually(buffer).Should(gbytes.Say("data: <l>foobar</l>\n\n"))
 	})
 	It("returns an error if is not a log", func() {
-		e := sse.NewEncoder(gbytes.NewBuffer())
+		e := sse.NewEncoder(gbytes.NewBuffer(), "")
 
 		Expect(e).ToNot(BeNil())
 
