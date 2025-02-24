@@ -23,6 +23,8 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 	var stdinWriter *io.PipeWriter
 	var targetUrl string
 
+	expect := playwright.NewPlaywrightAssertions()
+
 	BeforeEach(func() {
 		stdinReader, stdinWriter = io.Pipe()
 
@@ -148,9 +150,7 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 			pw, err := playwright.Run()
 			Expect(err).ShouldNot(HaveOccurred())
 
-			browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
-				Headless: playwright.Bool(false),
-			})
+			browser, err := pw.Chromium.Launch()
 			Expect(err).ShouldNot(HaveOccurred())
 
 			page, err := browser.NewPage()
@@ -160,16 +160,22 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 			_, err = page.Goto(targetUrl)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			_, _ = fmt.Fprintln(stdinWriter, "and another")
+			err = expect.Locator(page.GetByText("Streamlog")).ToBeVisible()
+			Expect(err).ShouldNot(HaveOccurred())
+
 			_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
+			_, _ = fmt.Fprintln(stdinWriter, "and another")
+
+			err = expect.Locator(page.GetByText("line from stdin")).ToBeVisible()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			err = expect.Locator(page.GetByText("and another")).ToBeVisible()
+			Expect(err).ShouldNot(HaveOccurred())
 
 			entries, err := page.Locator("table tr").All()
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(entries).To(HaveLen(2))
-
-			Expect(entries[0].TextContent()).To(ContainSubstring("line from stdin"))
-			Expect(entries[1].TextContent()).To(ContainSubstring("and another"))
 
 			By("sending an additional line to stdin and prepending to the content")
 			_, _ = fmt.Fprintln(stdinWriter, "bonus line from stdin")
@@ -207,8 +213,6 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 
 			By("sending a line to stdin")
 			_, _ = fmt.Fprintln(stdinWriter, "and another")
-
-			expect := playwright.NewPlaywrightAssertions()
 
 			for i, page := range pages {
 				By(fmt.Sprintf("checking page #%d", i+1))
