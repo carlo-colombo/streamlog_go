@@ -18,6 +18,7 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.3.6 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/dlclark/regexp2 v1.11.0 // indirect
 	github.com/dominikbraun/graph v0.23.0 // indirect
 	github.com/elliotchance/orderedmap/v2 v2.7.0 // indirect
@@ -26,7 +27,9 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.1 // indirect
 	github.com/go-git/go-git/v5 v5.13.1 // indirect
+	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/go-task/task/v3 v3.41.0 // indirect
 	github.com/go-task/template v0.1.0 // indirect
@@ -43,6 +46,7 @@ require (
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
+	github.com/playwright-community/playwright-go v0.5001.0 // indirect
 	github.com/radovskyb/watcher v1.0.7 // indirect
 	github.com/sajari/fuzzy v1.0.0 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
@@ -67,4 +71,5 @@ require (
 tool (
 	github.com/go-task/task/v3/cmd/task
 	github.com/onsi/ginkgo/v2/ginkgo
+	github.com/playwright-community/playwright-go/cmd/playwright
 )

@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/playwright-community/playwright-go"
 	"io"
 	"net/http"
 	"strings"
@@ -130,6 +131,10 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 	})
 
 	Describe("the root endpoint", func() {
+		BeforeEach(func() { PauseOutputInterception() })
+
+		AfterEach(func() { ResumeOutputInterception() })
+
 		It("returns an index.html page", func() {
 			resp, err := http.Get(targetUrl + "")
 			Expect(err).ShouldNot(HaveOccurred())
@@ -138,6 +143,37 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 				HaveHTTPStatus(http.StatusOK),
 				HaveHTTPHeaderWithValue("Content-Type", "text/html"),
 			))
+
+			PauseOutputInterception()
+			pw, err := playwright.Run()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			browser, err := pw.Chromium.Launch()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			page, err := browser.NewPage()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			By("opening the web browser")
+			_, err = page.Goto(targetUrl)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			_, _ = fmt.Fprintln(stdinWriter, "and another")
+			_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
+
+			entries, err := page.Locator("table tr").All()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(entries).To(HaveLen(2))
+
+			Expect(entries[0].TextContent()).To(ContainSubstring("line from stdin"))
+			Expect(entries[1].TextContent()).To(ContainSubstring("and another"))
+
+			By("sending an additional line to stdin and checking the page content")
+			_, _ = fmt.Fprintln(stdinWriter, "bonus line from stdin")
+			logLine, err := page.Locator("table tr:first-child").AllTextContents()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(logLine[0]).To(ContainSubstring("bonus line from stdin"))
 		})
 	})
 
