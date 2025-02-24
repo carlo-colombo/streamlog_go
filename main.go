@@ -22,13 +22,17 @@ func main() {
 	port := flag.String("port", "0", "port")
 	flag.Parse()
 
-	logs := make(chan string)
+	var clients []chan string
+	//logs := make(chan string)
 
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
 			line := scanner.Text()
-			logs <- line
+
+			for _, client := range clients {
+				client <- line
+			}
 		}
 	}()
 
@@ -48,8 +52,13 @@ func main() {
 		encoder := newEncoderAndSetContentHeaders(w, r.URL.Query().Has("sse"))
 		flusher.Flush()
 
+		client := make(chan string)
+		clients = append(clients, client)
+
+		fmt.Println("client count:", len(clients))
+
 		for {
-			logentry.Log{Line: <-logs}.Encode(encoder)
+			logentry.Log{Line: <-client}.Encode(encoder)
 
 			flusher.Flush()
 		}

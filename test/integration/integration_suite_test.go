@@ -4,6 +4,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/playwright-community/playwright-go"
 	"io"
 	"os"
 	"os/exec"
@@ -11,8 +12,8 @@ import (
 )
 
 var (
-	pathToBin                 string
-	commitHash, pathToGitRepo string
+	pathToBin     string
+	pathToGitRepo string
 )
 
 func TestIntegration(t *testing.T) {
@@ -26,6 +27,8 @@ func TestIntegration(t *testing.T) {
 		pathToBin, err = gexec.Build("github.com/carlo-colombo/streamlog_go")
 
 		Expect(err).ToNot(HaveOccurred())
+
+		Expect(playwright.Install()).ToNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {

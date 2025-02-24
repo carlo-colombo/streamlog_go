@@ -14,6 +14,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 var _ = Describe("Test/Integration/Streamlog", func() {
@@ -144,11 +145,12 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 				HaveHTTPHeaderWithValue("Content-Type", "text/html"),
 			))
 
-			PauseOutputInterception()
 			pw, err := playwright.Run()
 			Expect(err).ShouldNot(HaveOccurred())
 
-			browser, err := pw.Chromium.Launch()
+			browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
+				Headless: playwright.Bool(false),
+			})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			page, err := browser.NewPage()
@@ -169,11 +171,53 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 			Expect(entries[0].TextContent()).To(ContainSubstring("line from stdin"))
 			Expect(entries[1].TextContent()).To(ContainSubstring("and another"))
 
-			By("sending an additional line to stdin and checking the page content")
+			By("sending an additional line to stdin and prepending to the content")
 			_, _ = fmt.Fprintln(stdinWriter, "bonus line from stdin")
 			logLine, err := page.Locator("table tr:first-child").AllTextContents()
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(logLine[0]).To(ContainSubstring("bonus line from stdin"))
+		})
+
+		It("shows logs to multiple connected clients", func() {
+			pw, err := playwright.Run()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			browser, err := pw.Chromium.Launch()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			var pages []playwright.Page
+
+			for i := 0; i < 5; i++ {
+				context, err := browser.NewContext()
+				Expect(err).ShouldNot(HaveOccurred())
+
+				page, err := context.NewPage()
+				Expect(err).ShouldNot(HaveOccurred())
+
+				pages = append(pages, page)
+
+				_, err = page.Goto(targetUrl)
+				Expect(err).ToNot(HaveOccurred())
+
+				_ = page.GetByText("Streamlog")
+			}
+
+			By("giving it a second to have all the browsers and pages loaded")
+			time.Sleep(1 * time.Second)
+
+			By("sending a line to stdin")
+			_, _ = fmt.Fprintln(stdinWriter, "and another")
+
+			expect := playwright.NewPlaywrightAssertions()
+
+			for i, page := range pages {
+				By(fmt.Sprintf("checking page #%d", i+1))
+
+				err := expect.Locator(page.GetByText("and another")).ToBeVisible()
+				Expect(err).ShouldNot(HaveOccurred())
+
+				Expect(page.Close()).ShouldNot(HaveOccurred())
+			}
 		})
 	})
 
