@@ -1,7 +1,6 @@
 package integration_test
 
 import (
-	"bytes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -39,12 +38,11 @@ func TestIntegration(t *testing.T) {
 }
 
 func runBin(args []string, stdIn io.Reader) (session *gexec.Session) {
-	stdOutBuffer := bytes.Buffer{}
-	stdErrBuffer := bytes.Buffer{}
-
 	cmd := exec.Command(pathToBin, args...)
 	cmd.Stdin = stdIn
-	session, err := gexec.Start(cmd, &stdOutBuffer, &stdErrBuffer)
+	session, err := gexec.Start(cmd,
+		gexec.NewPrefixedWriter("[streamlog out] ", GinkgoWriter),
+		gexec.NewPrefixedWriter("[streamlog err] ", GinkgoWriter))
 	Expect(err).ToNot(HaveOccurred())
 
 	return session

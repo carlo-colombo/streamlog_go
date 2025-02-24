@@ -1,4 +1,4 @@
-package log_test
+package logentry_test
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 
-	"github.com/carlo-colombo/streamlog_go/log"
+	"github.com/carlo-colombo/streamlog_go/logentry"
 )
 
 var _ = Describe("Log", func() {
@@ -15,7 +15,7 @@ var _ = Describe("Log", func() {
 			b := NewBuffer()
 			e := json.NewEncoder(b)
 
-			log.Log{Line: "message"}.Encode(e)
+			logentry.Log{Line: "message"}.Encode(e)
 			b.Close()
 
 			Eventually(b).Should(Say("message"))

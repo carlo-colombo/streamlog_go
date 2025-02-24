@@ -2,7 +2,7 @@ package sse
 
 import (
 	"fmt"
-	"github.com/carlo-colombo/streamlog_go/log"
+	"github.com/carlo-colombo/streamlog_go/logentry"
 	"html/template"
 	"io"
 	"strings"
@@ -21,7 +21,7 @@ func NewEncoder(w io.Writer, line string) Encoder {
 }
 
 func (e Encoder) Encode(v any) error {
-	l, ok := v.(log.Log)
+	l, ok := v.(logentry.Log)
 	if !ok {
 		return fmt.Errorf("encoder can only encode a log object")
 	}

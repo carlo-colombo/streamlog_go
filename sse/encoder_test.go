@@ -1,7 +1,7 @@
 package sse_test
 
 import (
-	"github.com/carlo-colombo/streamlog_go/log"
+	"github.com/carlo-colombo/streamlog_go/logentry"
 	"github.com/carlo-colombo/streamlog_go/sse"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -20,7 +20,8 @@ var _ = Describe("Sse/Encoder", func() {
 
 		Expect(e).ToNot(BeNil())
 
-		e.Encode(log.Log{Line: "foobar"})
+		err := e.Encode(logentry.Log{Line: "foobar"})
+		Expect(err).ToNot(HaveOccurred())
 
 		Eventually(buffer).Should(gbytes.Say("data: <l>foobar</l>\n\n"))
 	})
@@ -30,6 +31,6 @@ var _ = Describe("Sse/Encoder", func() {
 		Expect(e).ToNot(BeNil())
 
 		err := e.Encode(nil)
-		Expect(err).To(HaveOccurred())
+		Expect(err).To(MatchError(ContainSubstring("encoder can only encode a log object")))
 	})
 })

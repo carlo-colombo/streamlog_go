@@ -16,5 +16,4 @@ func ScanEvent(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		merged = append(merged, nToken...)
 		return advance + nAdvance, merged, nil
 	}
-	return advance, token, err
 }

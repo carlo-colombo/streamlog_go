@@ -19,17 +19,21 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 	var session *gexec.Session
 	var stdinReader io.Reader
 	var stdinWriter *io.PipeWriter
+	var targetUrl string
 
-	It("starts, and forward stdin to http response", func() {
+	BeforeEach(func() {
 		stdinReader, stdinWriter = io.Pipe()
 
 		session = runBin([]string{}, stdinReader)
-		Eventually(session.Err).Should(Say("Starting on http://localhost:"))
 
-		targetUrl := getTargetUrl(session.Err)
+		Eventually(session.Err, "2s").Should(Say("Starting on http://localhost:"))
 
-		By(fmt.Sprintf("retrieving lines from endpoint %s", targetUrl))
+		targetUrl = getTargetUrl(session.Err)
 
+		By(fmt.Sprintf("targetting endpoint %s", targetUrl))
+	})
+
+	It("forwards stdin to an endpoint", func() {
 		resp, err := http.Get(targetUrl + "/logs")
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(200))
@@ -69,16 +73,6 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 
 	Describe("the logs endpoint", func() {
 		It("returns JSON new line delimited body", func() {
-			stdinReader, stdinWriter = io.Pipe()
-
-			session = runBin([]string{}, stdinReader)
-
-			Eventually(session.Err).Should(Say("Starting on http://localhost:"))
-
-			targetUrl := getTargetUrl(session.Err)
-
-			By(fmt.Sprintf("retrieving lines from endpoint %s", targetUrl))
-
 			resp, err := http.Get(targetUrl + "/logs")
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
@@ -103,16 +97,6 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 		})
 
 		It("returns sse events with html content", func() {
-			stdinReader, stdinWriter = io.Pipe()
-
-			session = runBin([]string{}, stdinReader)
-
-			Eventually(session.Err).Should(Say("Starting on http://localhost:"))
-
-			targetUrl := getTargetUrl(session.Err)
-
-			By(fmt.Sprintf("retrieving lines from endpoint %s", targetUrl))
-
 			resp, err := http.Get(targetUrl + "/logs?sse")
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(resp).To(SatisfyAll(
@@ -133,7 +117,7 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 				events = append(events, event)
 
 				if len(events) == 2 {
-					resp.Body.Close()
+					_ = resp.Body.Close()
 					break
 				}
 			}
@@ -147,16 +131,6 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 
 	Describe("the root endpoint", func() {
 		It("returns an index.html page", func() {
-			stdinReader, stdinWriter = io.Pipe()
-
-			session = runBin([]string{}, stdinReader)
-
-			Eventually(session.Err).Should(Say("Starting on http://localhost:"))
-
-			targetUrl := getTargetUrl(session.Err)
-
-			By(fmt.Sprintf("retrieving lines from endpoint %s", targetUrl))
-
 			resp, err := http.Get(targetUrl + "")
 			Expect(err).ShouldNot(HaveOccurred())
 

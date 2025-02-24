@@ -1,4 +1,4 @@
-package log_test
+package logentry_test
 
 import (
 	"testing"

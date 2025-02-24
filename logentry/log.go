@@ -1,4 +1,4 @@
-package log
+package logentry
 
 type Encoder interface {
 	Encode(v any) error
