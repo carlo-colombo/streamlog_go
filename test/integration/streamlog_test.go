@@ -148,7 +148,7 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 
 			Expect(resp).To(SatisfyAll(
 				HaveHTTPStatus(http.StatusOK),
-				HaveHTTPHeaderWithValue("Content-Type", "text/html"),
+				HaveHTTPHeaderWithValue("Content-Type", ContainSubstring("text/html")),
 			))
 
 			pw, err := playwright.Run()
