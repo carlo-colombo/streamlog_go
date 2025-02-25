@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/carlo-colombo/streamlog_go/logentry"
 	"github.com/carlo-colombo/streamlog_go/sse"
-	"html/template"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -45,15 +45,8 @@ func main() {
 		}
 	}()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-
-		tmpl, _ := template.ParseFS(templates, "templates/index.html")
-
-		var q struct{}
-		tmpl.Execute(w, q)
-	})
+	fsys, _ := fs.Sub(static, "app/dist/app/browser")
+	http.Handle("/", http.FileServer(http.FS(fsys)))
 
 	http.HandleFunc("/logs", func(w http.ResponseWriter, r *http.Request) {
 		flusher, _ := w.(http.Flusher)

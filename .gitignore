@@ -1,2 +1,4 @@
 .idea
 streamlog_go.iml
+node_modules
+streamlog_go

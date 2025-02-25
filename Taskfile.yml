@@ -3,12 +3,23 @@
 version: '3'
 
 tasks:
-  run:
+  build:
+    deps: [clean]
     cmds:
-      - go run main.go --port {{.PORT | default "9090"}}
+      - pnpm -C app ng build
+      - go build .
   test-debug:
     cmds:
       - go tool ginkgo run -p -vv -r --randomize-all
   test:
     cmds:
       - go tool ginkgo run -p -r --randomize-all
+  clean:
+    cmds:
+      - rm -rf app/dist
+  dev:
+    deps: [clean]
+    cmds:
+      - |
+        pnpm -C app watch &
+        go run -tags dev . --port {{.PORT | default "9090"}}
