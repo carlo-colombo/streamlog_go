@@ -224,16 +224,18 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 		_, _ = fmt.Fprintln(stdinWriter, "and another")
 		_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
 
-		resp, err := http.Get(targetUrl + "/logs?sse")
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(resp).To(SatisfyAll(
-			HaveHTTPStatus(http.StatusOK),
-			HaveHTTPHeaderWithValue("Content-Type", "text/event-stream"),
-		))
+		for i := 0; i < 5; i++ {
+			resp, err := http.Get(targetUrl + "/logs?sse")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(resp).To(SatisfyAll(
+				HaveHTTPStatus(http.StatusOK),
+				HaveHTTPHeaderWithValue("Content-Type", "text/event-stream"),
+			))
 
-		bodyReader := BufferReader(resp.Body)
-		Eventually(bodyReader).Should(Say("and another"))
-		Eventually(bodyReader).Should(Say("line from stdin"))
+			bodyReader := BufferReader(resp.Body)
+			Eventually(bodyReader).Should(Say("and another"))
+			Eventually(bodyReader).Should(Say("line from stdin"))
+		}
 	})
 
 	AfterEach(func() {
