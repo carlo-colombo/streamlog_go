@@ -23,13 +23,22 @@ func main() {
 	flag.Parse()
 
 	var clients []chan string
-	//logs := make(chan string)
+	logs := make(chan string)
+	var logsDb []string
 
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
 			line := scanner.Text()
 
+			logs <- line
+		}
+	}()
+
+	go func() {
+		for {
+			line := <-logs
+			logsDb = append(logsDb, line)
 			for _, client := range clients {
 				client <- line
 			}
@@ -56,6 +65,13 @@ func main() {
 		clients = append(clients, client)
 
 		fmt.Println("client count:", len(clients))
+		fmt.Println("current log count:", len(logsDb))
+
+		for _, log := range logsDb {
+			logentry.Log{Line: log}.Encode(encoder)
+		}
+
+		flusher.Flush()
 
 		for {
 			logentry.Log{Line: <-client}.Encode(encoder)
