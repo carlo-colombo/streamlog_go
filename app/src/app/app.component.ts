@@ -7,7 +7,7 @@ import {DomSanitizer, SafeHtml} from '@angular/platform-browser';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, NgFor],
+  imports: [NgFor],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
