@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/carlo-colombo/streamlog_go/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/onsi/gomega/types"
 	"github.com/playwright-community/playwright-go"
 	"io"
 	"net/http"
@@ -17,13 +19,15 @@ import (
 	"time"
 )
 
+var expect playwright.PlaywrightAssertions = playwright.NewPlaywrightAssertions(2000)
+
 var _ = Describe("Test/Integration/Streamlog", func() {
 	var session *gexec.Session
 	var stdinReader io.Reader
 	var stdinWriter *io.PipeWriter
 	var targetUrl string
 
-	expect := playwright.NewPlaywrightAssertions()
+	expect = playwright.NewPlaywrightAssertions()
 
 	BeforeEach(func() {
 		stdinReader, stdinWriter = io.Pipe()
@@ -160,28 +164,20 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 			_, err = page.Goto(targetUrl)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			err = expect.Locator(page.GetByText("Streamlog")).ToBeVisible()
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(page).To(HaveSelector("h1"))
+			Expect(page).To(HaveText("Streamlog"))
 
 			_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
 			_, _ = fmt.Fprintln(stdinWriter, "and another")
 
-			err = expect.Locator(page.GetByText("line from stdin")).ToBeVisible()
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(page).To(HaveText("line from stdin"))
+			Expect(page).To(HaveText("and another"))
 
-			err = expect.Locator(page.GetByText("and another")).ToBeVisible()
-			Expect(err).ShouldNot(HaveOccurred())
-
-			entries, err := page.Locator("table tr").All()
-			Expect(err).ShouldNot(HaveOccurred())
-
-			Expect(entries).To(HaveLen(2))
+			Expect(page.Locator("table tr")).To(HaveCount(2))
 
 			By("sending an additional line to stdin and prepending to the content")
 			_, _ = fmt.Fprintln(stdinWriter, "bonus line from stdin")
-			logLine, err := page.Locator("table tr:first-child").AllTextContents()
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(logLine[0]).To(ContainSubstring("bonus line from stdin"))
+			Expect(page.Locator("table tr:first-child")).To(HaveText("bonus line from stdin"))
 		})
 
 		It("shows logs to multiple connected clients", func() {
@@ -205,7 +201,7 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 				_, err = page.Goto(targetUrl)
 				Expect(err).ToNot(HaveOccurred())
 
-				_ = page.GetByText("Streamlog")
+				Expect(page).To(HaveText("Streamlog"))
 			}
 
 			By("giving it a second to have all the browsers and pages loaded")
@@ -217,9 +213,7 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 			for i, page := range pages {
 				By(fmt.Sprintf("checking page #%d", i+1))
 
-				err := expect.Locator(page.GetByText("and another")).ToBeVisible()
-				Expect(err).ShouldNot(HaveOccurred())
-
+				Expect(page).To(HaveText("and another"))
 				Expect(page.Close()).ShouldNot(HaveOccurred())
 			}
 		})
@@ -232,6 +226,95 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 		Eventually(session).Should(gexec.Exit())
 	})
 })
+
+type haveCount struct {
+	expected int
+	actual   int
+}
+
+func (h *haveCount) Match(actual interface{}) (success bool, err error) {
+	actualLocator, ok := actual.(playwright.Locator)
+
+	if !ok {
+		return false, fmt.Errorf("HaveCount matcher expects a playwright.Locator")
+	}
+
+	err = expect.Locator(actualLocator).ToHaveCount(h.expected)
+	locators, _ := actualLocator.All()
+	h.actual = len(locators)
+
+	return err == nil, nil
+}
+
+func (h haveCount) FailureMessage(actual interface{}) (message string) {
+	return fmt.Sprintf(`Expected locator to have count of %d
+Actual locator has count %d`, h.expected, h.actual)
+}
+
+func (h haveCount) NegatedFailureMessage(actual interface{}) (message string) {
+	return fmt.Sprintf(`Expected locator to not have count %d
+Actual locator has count of %d`, h.expected, h.actual)
+}
+
+func HaveCount(expected int) types.GomegaMatcher {
+	return &haveCount{expected: expected}
+}
+
+func HaveText(text string) types.GomegaMatcher {
+	return &haveTextMatcher{text}
+}
+
+func HaveSelector(selector string) types.GomegaMatcher {
+	return &haveSelectorMatcher{selector: selector}
+}
+
+type haveSelectorMatcher struct {
+	selector string
+}
+type haveTextMatcher struct {
+	text string
+}
+
+func (h haveTextMatcher) Match(actual interface{}) (success bool, err error) {
+	if page, ok := actual.(playwright.Page); ok {
+		err = expect.Locator(page.GetByText(h.text)).ToBeVisible()
+		return err == nil, nil
+	}
+
+	if locator, ok := actual.(playwright.Locator); ok {
+		err = expect.Locator(locator).ToHaveText(h.text)
+		return err == nil, nil
+	}
+	return false, errors.New("HaveTextMatcher expects a playwright.Page or playwright.Locator")
+}
+
+func (h haveTextMatcher) FailureMessage(actual interface{}) (message string) {
+	return fmt.Sprintf("Expected\n\t%#v\nto contain text \n\t%#v", actual, h.text)
+}
+
+func (h haveTextMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+	return fmt.Sprintf("Expected\n\t%#v\n not to contain text \n\t%#v", actual, h.text)
+}
+
+func (h haveSelectorMatcher) Match(actual interface{}) (success bool, err error) {
+	page, ok := actual.(playwright.Page)
+
+	if !ok {
+		return false, fmt.Errorf("HaveSelector matcher expects a playwright.Page")
+	}
+
+	err = expect.Locator(page.Locator(h.selector)).ToBeVisible()
+
+	return err == nil, err
+}
+
+func (h haveSelectorMatcher) FailureMessage(actual interface{}) (message string) {
+	return fmt.Sprintf("Expected\n\t%#v\nto contain selector \n\t%#v", actual, h.selector)
+}
+
+func (h haveSelectorMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+	return fmt.Sprintf("Expected\n\t%#v\n not to contain selector \n\t%#v", actual, h.selector)
+}
 
 func getTargetUrl(err *Buffer) string {
 	targetUrl, _ := strings.CutPrefix(string(err.Contents()), "Starting on")
