@@ -10,9 +10,12 @@ import (
 	"github.com/carlo-colombo/streamlog_go/sse"
 	"io/fs"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
+	"strconv"
+	"sync"
 )
 
 //go:embed templates
@@ -22,7 +25,10 @@ func main() {
 	port := flag.String("port", "0", "port")
 	flag.Parse()
 
-	var clients []chan string
+	mu := sync.Mutex{}
+
+	clients := map[string]chan string{}
+
 	logs := make(chan string)
 	var logsDb []string
 
@@ -46,19 +52,22 @@ func main() {
 	}()
 
 	fsys, _ := fs.Sub(static, "app/dist/app/browser")
+
 	http.Handle("/", http.FileServer(http.FS(fsys)))
 
 	http.HandleFunc("/logs", func(w http.ResponseWriter, r *http.Request) {
+		uid := strconv.Itoa(rand.Int())
+
 		flusher, _ := w.(http.Flusher)
 
 		encoder := newEncoderAndSetContentHeaders(w, r.URL.Query().Has("sse"))
 		flusher.Flush()
 
 		client := make(chan string)
-		clients = append(clients, client)
 
-		fmt.Println("client count:", len(clients))
-		fmt.Println("current log count:", len(logsDb))
+		mu.Lock()
+		clients[uid] = client
+		mu.Unlock()
 
 		for _, log := range logsDb {
 			logentry.Log{Line: log}.Encode(encoder)
@@ -66,11 +75,25 @@ func main() {
 
 		flusher.Flush()
 
+	Response:
 		for {
-			logentry.Log{Line: <-client}.Encode(encoder)
+			select {
+			case <-r.Context().Done():
+				fmt.Println("DONE", uid)
+				mu.Lock()
+				delete(clients, uid)
+				mu.Unlock()
+				break Response
+			case line := <-client:
+				logentry.Log{Line: line}.Encode(encoder)
 
-			flusher.Flush()
+				flusher.Flush()
+			}
 		}
+	})
+
+	http.HandleFunc("/clients", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "%d", len(clients))
 	})
 
 	listener, _ := net.Listen("tcp", fmt.Sprintf(":%s", *port))

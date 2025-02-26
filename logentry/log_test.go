@@ -20,5 +20,14 @@ var _ = Describe("Log", func() {
 
 			Eventually(b).Should(Say("message"))
 		})
+
+		It("handlers if the buffers is closed", func() {
+			b := NewBuffer()
+			e := json.NewEncoder(b)
+			Expect(b.Close()).To(Succeed())
+
+			Expect(logentry.Log{Line: "message"}.Encode(e)).
+				To(MatchError(ContainSubstring("impossible to encode log entry:")))
+		})
 	})
 })

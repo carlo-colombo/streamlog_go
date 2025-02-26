@@ -110,24 +110,50 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 				ContainSubstring(`line from stdin`),
 			))
 		})
+
+		It("returns logs to a client that are ingested before the client is connected", func() {
+			_, _ = fmt.Fprintln(stdinWriter, "and another")
+			_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
+
+			for i := 0; i < 5; i++ {
+				resp, err := http.Get(targetUrl + "/logs?sse")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(resp).To(SatisfyAll(
+					HaveHTTPStatus(http.StatusOK),
+					HaveHTTPHeaderWithValue("Content-Type", "text/event-stream"),
+				))
+
+				bodyReader := BufferReader(resp.Body)
+				Eventually(bodyReader).Should(Say("and another"))
+				Eventually(bodyReader).Should(Say("line from stdin"))
+			}
+		})
 	})
 
-	It("sends logs to a client that are ingested before the client is connected", func() {
-		_, _ = fmt.Fprintln(stdinWriter, "and another")
-		_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
+	Describe("/clients endpoint", func() {
+		It("returns a count of clients", func() {
+			Expect(http.Get(targetUrl + "/clients")).To(
+				SatisfyAll(
+					HaveHTTPStatus(http.StatusOK),
+					HaveHTTPBody("0")))
 
-		for i := 0; i < 5; i++ {
-			resp, err := http.Get(targetUrl + "/logs?sse")
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(resp).To(SatisfyAll(
-				HaveHTTPStatus(http.StatusOK),
-				HaveHTTPHeaderWithValue("Content-Type", "text/event-stream"),
-			))
+			resp, _ := http.Get(targetUrl + "/logs?sse")
 
-			bodyReader := BufferReader(resp.Body)
-			Eventually(bodyReader).Should(Say("and another"))
-			Eventually(bodyReader).Should(Say("line from stdin"))
-		}
+			Expect(http.Get(targetUrl + "/clients")).To(
+				SatisfyAll(
+					HaveHTTPStatus(http.StatusOK),
+					HaveHTTPBody("1")))
+
+			By("having the client closing the connection")
+			Expect(resp.Body.Close()).ToNot(HaveOccurred())
+
+			Eventually(func() (*http.Response, error) {
+				return http.Get(targetUrl + "/clients")
+			}).Should(
+				SatisfyAll(
+					HaveHTTPStatus(http.StatusOK),
+					HaveHTTPBody("0")))
+		})
 	})
 
 	AfterEach(func() {
