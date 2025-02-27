@@ -2,10 +2,8 @@ package main
 
 import (
 	"embed"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/carlo-colombo/streamlog_go/logentry"
 	"github.com/carlo-colombo/streamlog_go/sse"
 	"io/fs"
 	"log"
@@ -34,7 +32,10 @@ func main() {
 	http.HandleFunc("/logs", func(w http.ResponseWriter, r *http.Request) {
 		flusher, _ := w.(http.Flusher)
 
-		encoder := newEncoderAndSetContentHeaders(w, r.URL.Query().Has("sse"))
+		data, _ := templates.ReadFile("templates/log.html")
+		w.Header().Set("Content-Type", "text/event-stream")
+		encoder := sse.NewEncoder(w, string(data))
+
 		flusher.Flush()
 
 		for _, logItem := range store.List() {
@@ -72,15 +73,4 @@ func main() {
 
 	err = http.Serve(listener, nil)
 	log.Fatal(err)
-}
-
-func newEncoderAndSetContentHeaders(w http.ResponseWriter, isSSE bool) logentry.Encoder {
-	if isSSE {
-		data, _ := templates.ReadFile("templates/log.html")
-		w.Header().Set("Content-Type", "text/event-stream")
-		return sse.NewEncoder(w, string(data))
-	}
-
-	w.Header().Set("Content-Type", "application/jsonl")
-	return json.NewEncoder(w)
 }

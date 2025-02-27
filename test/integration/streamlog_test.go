@@ -2,8 +2,6 @@ package integration_test
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/carlo-colombo/streamlog_go/test/utils"
 	. "github.com/onsi/ginkgo/v2"
@@ -50,30 +48,6 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 	})
 
 	Describe("the logs endpoint", func() {
-		It("returns JSON new line delimited body", func() {
-			resp, err := http.Get(targetUrl + "/logs")
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(200))
-
-			_, _ = fmt.Fprintln(stdinWriter, "and another")
-			_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
-
-			scanner := bufio.NewScanner(resp.Body)
-
-			i := 0
-			for scanner.Scan() {
-				i++
-				result := make(map[string]interface{})
-				lineBuffer := bytes.NewBuffer(scanner.Bytes())
-				err := json.NewDecoder(lineBuffer).Decode(&result)
-				Expect(err).ShouldNot(HaveOccurred())
-
-				if i == 2 {
-					_ = resp.Body.Close()
-				}
-			}
-		})
-
 		It("returns sse events with html content", func() {
 			resp, err := http.Get(targetUrl + "/logs?sse")
 			Expect(err).ShouldNot(HaveOccurred())
