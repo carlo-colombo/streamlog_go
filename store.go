@@ -40,7 +40,7 @@ func (s *Store) List() []logentry.Log {
 	return s.logs
 }
 
-func (s *Store) Unsubscribe(uid string) {
+func (s *Store) Disconnect(uid string) {
 	delete(s.clients, uid)
 	log.Printf("Client %s disconnected", uid)
 }

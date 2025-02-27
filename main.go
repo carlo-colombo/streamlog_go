@@ -41,15 +41,14 @@ func main() {
 		for _, logItem := range store.List() {
 			logItem.Encode(encoder)
 		}
-
 		flusher.Flush()
-		uid := strconv.Itoa(rand.Int())
 
+		uid := strconv.Itoa(rand.Int())
 	Response:
 		for {
 			select {
 			case <-r.Context().Done():
-				store.Unsubscribe(uid)
+				store.Disconnect(uid)
 				break Response
 			case line := <-store.LineFor(uid):
 				line.Encode(encoder)

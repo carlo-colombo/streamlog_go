@@ -61,7 +61,7 @@ var _ = Describe("Store", func() {
 			Equal(logentry.Log{Line: "Hello World"})))
 	})
 
-	It("removes client when unsubscribing", func() {
+	It("removes client when disconnecting", func() {
 		go func() {
 			_, _ = fmt.Fprintln(w, "Hello World")
 		}()
@@ -69,7 +69,7 @@ var _ = Describe("Store", func() {
 		Eventually(store.LineFor("client A")).Should(Receive(
 			Equal(logentry.Log{Line: "Hello World"})))
 
-		store.Unsubscribe("client A")
+		store.Disconnect("client A")
 
 		go func() {
 			_, _ = fmt.Fprintln(w, "Hello World 2")
