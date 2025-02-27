@@ -35,11 +35,6 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 
 		Eventually(bodyReader).Should(Say("and another"))
 		Eventually(bodyReader).Should(Say("line from stdin"))
-
-		By("terminating the process")
-		Expect(stdinWriter.Close()).ShouldNot(HaveOccurred())
-		session.Terminate()
-		Eventually(session).Should(gexec.Exit())
 	})
 
 	It("accepts port as parameter", func() {

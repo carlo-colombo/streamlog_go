@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"embed"
 	"encoding/json"
 	"flag"
@@ -15,7 +14,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 )
 
 //go:embed templates
@@ -25,67 +23,35 @@ func main() {
 	port := flag.String("port", "0", "port")
 	flag.Parse()
 
-	mu := sync.Mutex{}
+	store := NewStore()
 
-	clients := map[string]chan string{}
-
-	logs := make(chan string)
-	var logsDb []string
-
-	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			line := scanner.Text()
-
-			logs <- line
-		}
-	}()
-
-	go func() {
-		for {
-			line := <-logs
-			logsDb = append(logsDb, line)
-			for _, client := range clients {
-				client <- line
-			}
-		}
-	}()
+	go store.Scan(os.Stdin)
 
 	fsys, _ := fs.Sub(static, "app/dist/app/browser")
 
 	http.Handle("/", http.FileServer(http.FS(fsys)))
 
 	http.HandleFunc("/logs", func(w http.ResponseWriter, r *http.Request) {
-		uid := strconv.Itoa(rand.Int())
-
 		flusher, _ := w.(http.Flusher)
 
 		encoder := newEncoderAndSetContentHeaders(w, r.URL.Query().Has("sse"))
 		flusher.Flush()
 
-		client := make(chan string)
-
-		mu.Lock()
-		clients[uid] = client
-		mu.Unlock()
-
-		for _, log := range logsDb {
-			logentry.Log{Line: log}.Encode(encoder)
+		for _, logItem := range store.List() {
+			logItem.Encode(encoder)
 		}
 
 		flusher.Flush()
+		uid := strconv.Itoa(rand.Int())
 
 	Response:
 		for {
 			select {
 			case <-r.Context().Done():
-				fmt.Println("DONE", uid)
-				mu.Lock()
-				delete(clients, uid)
-				mu.Unlock()
+				store.Unsubscribe(uid)
 				break Response
-			case line := <-client:
-				logentry.Log{Line: line}.Encode(encoder)
+			case line := <-store.LineFor(uid):
+				line.Encode(encoder)
 
 				flusher.Flush()
 			}
@@ -93,7 +59,7 @@ func main() {
 	})
 
 	http.HandleFunc("/clients", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "%d", len(clients))
+		fmt.Fprintf(w, "%d", len(store.Clients()))
 	})
 
 	listener, _ := net.Listen("tcp", fmt.Sprintf(":%s", *port))
