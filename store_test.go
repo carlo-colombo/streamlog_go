@@ -12,13 +12,21 @@ import (
 
 var _ = Describe("Store", func() {
 
-	It("scans and collect lines", func() {
-		var r, w = io.Pipe()
+	var (
+		r     io.Reader
+		w     *io.PipeWriter
+		store main.Store
+	)
 
-		store := main.NewStore()
+	BeforeEach(func() {
+		r, w = io.Pipe()
+
+		store = main.NewStore()
 
 		go store.Scan(r)
+	})
 
+	It("scans and collect lines", func() {
 		go func() {
 			_, _ = fmt.Fprintln(w, "Hello World")
 			_, _ = fmt.Fprintln(w, "New World")
@@ -31,12 +39,6 @@ var _ = Describe("Store", func() {
 	})
 
 	It("provide a channel that emits logs", func() {
-		var r, w = io.Pipe()
-
-		store := main.NewStore()
-
-		go store.Scan(r)
-
 		go func() {
 			_, _ = fmt.Fprintln(w, "Hello World")
 			_, _ = fmt.Fprintln(w, "New World")
@@ -49,12 +51,6 @@ var _ = Describe("Store", func() {
 	})
 
 	It("support multiple clients consuming logs", func() {
-		var r, w = io.Pipe()
-
-		store := main.NewStore()
-
-		go store.Scan(r)
-
 		go func() {
 			_, _ = fmt.Fprintln(w, "Hello World")
 		}()
@@ -66,12 +62,6 @@ var _ = Describe("Store", func() {
 	})
 
 	It("removes client when unsubscribing", func() {
-		var r, w = io.Pipe()
-
-		store := main.NewStore()
-
-		go store.Scan(r)
-
 		go func() {
 			_, _ = fmt.Fprintln(w, "Hello World")
 		}()
