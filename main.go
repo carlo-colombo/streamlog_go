@@ -32,14 +32,15 @@ func main() {
 	http.HandleFunc("/logs", func(w http.ResponseWriter, r *http.Request) {
 		flusher, _ := w.(http.Flusher)
 
-		data, _ := templates.ReadFile("templates/log.html")
 		w.Header().Set("Content-Type", "text/event-stream")
+
+		data, _ := templates.ReadFile("templates/log.html")
 		encoder := sse.NewEncoder(w, string(data))
 
 		flusher.Flush()
 
 		for _, logItem := range store.List() {
-			logItem.Encode(encoder)
+			_ = logItem.Encode(encoder)
 		}
 		flusher.Flush()
 
@@ -51,7 +52,7 @@ func main() {
 				store.Disconnect(uid)
 				break Response
 			case line := <-store.LineFor(uid):
-				line.Encode(encoder)
+				_ = line.Encode(encoder)
 
 				flusher.Flush()
 			}
@@ -59,7 +60,7 @@ func main() {
 	})
 
 	http.HandleFunc("/clients", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "%d", len(store.Clients()))
+		_, _ = fmt.Fprintf(w, "%d", len(store.Clients()))
 	})
 
 	listener, _ := net.Listen("tcp", fmt.Sprintf(":%s", *port))
