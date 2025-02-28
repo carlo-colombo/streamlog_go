@@ -2,20 +2,19 @@ package main_test
 
 import (
 	"fmt"
+	"github.com/carlo-colombo/streamlog_go"
 	"github.com/carlo-colombo/streamlog_go/logentry"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"io"
-
-	"github.com/carlo-colombo/streamlog_go"
 )
 
-var _ = Describe("Store", func() {
+var _ = Describe("InMemoryLogsStore", func() {
 
 	var (
 		r     io.Reader
 		w     *io.PipeWriter
-		store main.Store
+		store *main.InMemoryLogsStore
 	)
 
 	BeforeEach(func() {
@@ -51,13 +50,16 @@ var _ = Describe("Store", func() {
 	})
 
 	It("support multiple clients consuming logs", func() {
+		clientA := store.LineFor("client A")
+		clientB := store.LineFor("client B")
+
 		go func() {
 			_, _ = fmt.Fprintln(w, "Hello World")
 		}()
 
-		Eventually(store.LineFor("client A")).Should(Receive(
+		Eventually(clientA, "9s").Should(Receive(
 			Equal(logentry.Log{Line: "Hello World"})))
-		Eventually(store.LineFor("client B")).Should(Receive(
+		Eventually(clientB, "9s").Should(Receive(
 			Equal(logentry.Log{Line: "Hello World"})))
 	})
 

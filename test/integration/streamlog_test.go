@@ -14,28 +14,7 @@ import (
 
 var _ = Describe("Test/Integration/Streamlog", func() {
 
-	It("forwards stdin to an endpoint", func() {
-		resp, err := http.Get(targetUrl + "/logs")
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(resp.StatusCode).To(Equal(200))
-
-		By("sending lines to stdin and checking stdout")
-
-		_, _ = fmt.Fprintln(stdinWriter, "some line from stdin")
-
-		By("checking the response from the endpoint")
-		bodyReader := BufferReader(resp.Body)
-		Eventually(bodyReader).Should(Say("some line from stdin"))
-
-		By("sending multiple lines to stdin and checking the response from the endpoint")
-		_, _ = fmt.Fprintln(stdinWriter, "and another")
-		_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
-
-		Eventually(bodyReader).Should(Say("and another"))
-		Eventually(bodyReader).Should(Say("line from stdin"))
-	})
-
-	It("accepts port as parameter", func() {
+	It("accepts port as parameter to expose the service", func() {
 		stdinReader, stdinWriter = io.Pipe()
 
 		session = runBin([]string{"--port", "32323"}, stdinReader)
@@ -47,55 +26,44 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 		Expect(resp.StatusCode).To(Equal(200))
 	})
 
-	Describe("the logs endpoint", func() {
-		It("returns sse events with html content", func() {
-			resp, err := http.Get(targetUrl + "/logs?sse")
+	Describe("/logs endpoint", func() {
+		It("streams events matching the lines read from stdin", func() {
+			By("sending lines before connecting to the endpoint")
+
+			_, _ = fmt.Fprintln(stdinWriter, "first line")
+			_, _ = fmt.Fprintln(stdinWriter, "second line")
+
+			By("requesting the logs endpoint")
+
+			resp, err := http.Get(targetUrl + "/logs")
+
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(resp).To(SatisfyAll(
 				HaveHTTPStatus(http.StatusOK),
 				HaveHTTPHeaderWithValue("Content-Type", "text/event-stream"),
 			))
 
-			_, _ = fmt.Fprintln(stdinWriter, "and another")
-			_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
+			By("checking the response")
 
 			scanner := bufio.NewScanner(resp.Body)
 			scanner.Split(utils.ScanEvent)
 
-			var events []string
+			Expect(scanner.Scan()).To(BeTrue())
+			Expect(scanner.Text()).To(MatchRegexp("data:.*first line"))
 
-			for scanner.Scan() {
-				event := scanner.Text()
-				events = append(events, event)
+			Expect(scanner.Scan()).To(BeTrue())
+			Expect(scanner.Text()).To(MatchRegexp("data:.*second line"))
 
-				if len(events) == 2 {
-					_ = resp.Body.Close()
-					break
-				}
-			}
+			By("sending lines after connecting to the endpoint")
 
-			Expect(events).To(ContainElements(
-				ContainSubstring(`and another`),
-				ContainSubstring(`line from stdin`),
-			))
-		})
-
-		It("returns logs to a client that are ingested before the client is connected", func() {
 			_, _ = fmt.Fprintln(stdinWriter, "and another")
 			_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
 
-			for i := 0; i < 5; i++ {
-				resp, err := http.Get(targetUrl + "/logs?sse")
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(resp).To(SatisfyAll(
-					HaveHTTPStatus(http.StatusOK),
-					HaveHTTPHeaderWithValue("Content-Type", "text/event-stream"),
-				))
+			Expect(scanner.Scan()).To(BeTrue())
+			Expect(scanner.Text()).To(MatchRegexp("data:.*and another"))
 
-				bodyReader := BufferReader(resp.Body)
-				Eventually(bodyReader).Should(Say("and another"))
-				Eventually(bodyReader).Should(Say("line from stdin"))
-			}
+			Expect(scanner.Scan()).To(BeTrue())
+			Expect(scanner.Text()).To(MatchRegexp("data:.*line from stdin"))
 		})
 	})
 

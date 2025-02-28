@@ -4,14 +4,11 @@ import (
 	"embed"
 	"flag"
 	"fmt"
-	"github.com/carlo-colombo/streamlog_go/sse"
 	"io/fs"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 )
 
 //go:embed templates
@@ -28,40 +25,8 @@ func main() {
 	fsys, _ := fs.Sub(static, "app/dist/app/browser")
 
 	http.Handle("/", http.FileServer(http.FS(fsys)))
-
-	http.HandleFunc("/logs", func(w http.ResponseWriter, r *http.Request) {
-		flusher, _ := w.(http.Flusher)
-
-		w.Header().Set("Content-Type", "text/event-stream")
-
-		data, _ := templates.ReadFile("templates/log.html")
-		encoder := sse.NewEncoder(w, string(data))
-
-		flusher.Flush()
-
-		for _, logItem := range store.List() {
-			_ = logItem.Encode(encoder)
-		}
-		flusher.Flush()
-
-		uid := strconv.Itoa(rand.Int())
-	Response:
-		for {
-			select {
-			case <-r.Context().Done():
-				store.Disconnect(uid)
-				break Response
-			case line := <-store.LineFor(uid):
-				_ = line.Encode(encoder)
-
-				flusher.Flush()
-			}
-		}
-	})
-
-	http.HandleFunc("/clients", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = fmt.Fprintf(w, "%d", len(store.Clients()))
-	})
+	http.HandleFunc("/clients", ClientsHandler(store))
+	http.HandleFunc("/logs", LogsHandler(store))
 
 	listener, _ := net.Listen("tcp", fmt.Sprintf(":%s", *port))
 

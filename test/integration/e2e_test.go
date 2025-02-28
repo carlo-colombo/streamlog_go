@@ -15,9 +15,10 @@ var _ = Describe("e2e tests", func() {
 
 	AfterEach(func() { ResumeOutputInterception() })
 
-	Describe("index.html", func() {
+	Describe("the page shown as the /", func() {
 		It("shows logs", func() {
-			resp, err := http.Get(targetUrl + "")
+			By("testing if it is available")
+			resp, err := http.Get(targetUrl)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(resp).To(SatisfyAll(
@@ -25,6 +26,7 @@ var _ = Describe("e2e tests", func() {
 				HaveHTTPHeaderWithValue("Content-Type", ContainSubstring("text/html")),
 			))
 
+			By("starting a browser")
 			pw, err := playwright.Run()
 			Expect(err).ShouldNot(HaveOccurred())
 
