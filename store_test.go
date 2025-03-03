@@ -57,9 +57,9 @@ var _ = Describe("InMemoryLogsStore", func() {
 			_, _ = fmt.Fprintln(w, "Hello World")
 		}()
 
-		Eventually(clientA, "9s").Should(Receive(
+		Eventually(clientA, "2s").Should(Receive(
 			Equal(logentry.Log{Line: "Hello World"})))
-		Eventually(clientB, "9s").Should(Receive(
+		Eventually(clientB, "2s").Should(Receive(
 			Equal(logentry.Log{Line: "Hello World"})))
 	})
 

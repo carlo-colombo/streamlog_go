@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"github.com/carlo-colombo/streamlog_go/logentry"
 	"log"
 	"maps"
@@ -29,9 +28,8 @@ func (s *InMemoryLogsStore) Scan(r io.Reader) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
-		log := logentry.Log{Line: line}
-		s.logs = append(s.logs, log)
-		fmt.Println(s.Clients())
+		logLine := logentry.Log{Line: line}
+		s.logs = append(s.logs, logLine)
 		for _, client := range s.clients {
 			client <- logentry.Log{Line: line}
 		}
