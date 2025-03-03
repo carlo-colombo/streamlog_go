@@ -2,6 +2,7 @@ package logentry_test
 
 import (
 	"encoding/json"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
@@ -15,10 +16,11 @@ var _ = Describe("Log", func() {
 			b := NewBuffer()
 			e := json.NewEncoder(b)
 
-			logentry.Log{Line: "message"}.Encode(e)
+			log := logentry.NewLog("message")
+			log.Encode(e)
 			b.Close()
 
-			Eventually(b).Should(Say("message"))
+			Eventually(b).Should(Say(`{"line":"message","timestamp":`))
 		})
 
 		It("handlers if the buffers is closed", func() {
@@ -26,7 +28,8 @@ var _ = Describe("Log", func() {
 			e := json.NewEncoder(b)
 			Expect(b.Close()).To(Succeed())
 
-			Expect(logentry.Log{Line: "message"}.Encode(e)).
+			log := logentry.NewLog("message")
+			Expect(log.Encode(e)).
 				To(MatchError(ContainSubstring("impossible to encode log entry:")))
 		})
 	})

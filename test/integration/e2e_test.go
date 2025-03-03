@@ -2,12 +2,13 @@ package integration_test
 
 import (
 	"fmt"
+	"net/http"
+	"time"
+
 	. "github.com/carlo-colombo/streamlog_go/test/playwrightmatchers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/playwright-community/playwright-go"
-	"net/http"
-	"time"
 )
 
 var _ = Describe("e2e tests", func() {
@@ -53,7 +54,7 @@ var _ = Describe("e2e tests", func() {
 
 			By("sending an additional line to stdin and prepending to the content")
 			_, _ = fmt.Fprintln(stdinWriter, "bonus line from stdin")
-			Expect(page.Locator("table tr:first-child")).To(HaveText("bonus line from stdin"))
+			Expect(page.Locator("table tr:first-child td.message")).To(HaveText("bonus line from stdin"))
 		})
 
 		It("shows logs to multiple connected clients", func() {

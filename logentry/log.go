@@ -1,13 +1,24 @@
 package logentry
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type Encoder interface {
 	Encode(v any) error
 }
 
 type Log struct {
-	Line string `json:"line"`
+	Line      string    `json:"line"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+func NewLog(line string) Log {
+	return Log{
+		Line:      line,
+		Timestamp: time.Now(),
+	}
 }
 
 func (l Log) Encode(encoder Encoder) error {

@@ -1,1 +1,4 @@
-<tr> <td>{{.Line}}</td> </tr>
+<tr>
+	<td class="timestamp">{{.Timestamp.Format "2006-01-02 15:04:05"}}</td>
+	<td class="message">{{.Line}}</td>
+</tr>

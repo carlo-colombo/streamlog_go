@@ -2,11 +2,12 @@ package main_test
 
 import (
 	"fmt"
-	"github.com/carlo-colombo/streamlog_go"
+	"io"
+
+	main "github.com/carlo-colombo/streamlog_go"
 	"github.com/carlo-colombo/streamlog_go/logentry"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"io"
 )
 
 var _ = Describe("InMemoryLogsStore", func() {
@@ -31,9 +32,10 @@ var _ = Describe("InMemoryLogsStore", func() {
 			_, _ = fmt.Fprintln(w, "New World")
 		}()
 
+		Eventually(store.List).Should(HaveLen(2))
 		Eventually(store.List).Should(ContainElements(
-			logentry.Log{Line: "Hello World"},
-			logentry.Log{Line: "New World"},
+			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World")),
+			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("New World")),
 		))
 	})
 
@@ -44,9 +46,9 @@ var _ = Describe("InMemoryLogsStore", func() {
 		}()
 
 		Eventually(store.LineFor("foo")).Should(Receive(
-			Equal(logentry.Log{Line: "Hello World"})))
+			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World"))))
 		Eventually(store.LineFor("foo")).Should(Receive(
-			Equal(logentry.Log{Line: "New World"})))
+			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("New World"))))
 	})
 
 	It("support multiple clients consuming logs", func() {
@@ -58,9 +60,9 @@ var _ = Describe("InMemoryLogsStore", func() {
 		}()
 
 		Eventually(clientA, "2s").Should(Receive(
-			Equal(logentry.Log{Line: "Hello World"})))
+			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World"))))
 		Eventually(clientB, "2s").Should(Receive(
-			Equal(logentry.Log{Line: "Hello World"})))
+			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World"))))
 	})
 
 	It("removes client when disconnecting", func() {
@@ -69,7 +71,7 @@ var _ = Describe("InMemoryLogsStore", func() {
 		}()
 
 		Eventually(store.LineFor("client A")).Should(Receive(
-			Equal(logentry.Log{Line: "Hello World"})))
+			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World"))))
 
 		store.Disconnect("client A")
 
