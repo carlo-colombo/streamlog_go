@@ -3,21 +3,29 @@ package main_test
 import (
 	"bufio"
 	"context"
-	"github.com/carlo-colombo/streamlog_go"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+
+	main "github.com/carlo-colombo/streamlog_go"
 	"github.com/carlo-colombo/streamlog_go/logentry"
 	"github.com/carlo-colombo/streamlog_go/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"io"
-	"net/http"
-	"net/http/httptest"
 )
 
 type mockStore struct {
-	clients      []string
-	logs         []string
-	logsCh       chan logentry.Log
-	disconnected bool
+	clients        []string
+	logs           []string
+	logsCh         chan logentry.Log
+	disconnected   bool
+	filter         string
+	filterChangeCh chan struct{}
+}
+
+func (m *mockStore) FilterChangeFor() chan struct{} {
+	return m.filterChangeCh
 }
 
 func (m *mockStore) Scan(r io.Reader) {
@@ -43,6 +51,10 @@ func (m *mockStore) LineFor(uid string) chan logentry.Log {
 
 func (m *mockStore) Clients() []string {
 	return m.clients
+}
+
+func (m *mockStore) SetFilter(filter string) {
+	m.filter = filter
 }
 
 var _ = Describe("Handlers", func() {
@@ -167,6 +179,43 @@ var _ = Describe("Handlers", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(store.disconnected).To(BeTrue())
 			}, "2s").Should(Succeed())
+		})
+	})
+
+	Describe("FilterHandler", func() {
+		It("accepts POST requests with filter", func() {
+			store := &mockStore{}
+			handler := http.HandlerFunc(main.FilterHandler(store))
+
+			req, _ = http.NewRequest(http.MethodPost, "/filter", strings.NewReader(`{"filter":"test"}`))
+			req.Header.Set("Content-Type", "application/json")
+
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr).To(HaveHTTPStatus(http.StatusOK))
+			Expect(store.filter).To(Equal("test"))
+		})
+
+		It("rejects non-POST requests", func() {
+			store := &mockStore{}
+			handler := http.HandlerFunc(main.FilterHandler(store))
+
+			req, _ = http.NewRequest(http.MethodGet, "/filter", nil)
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr).To(HaveHTTPStatus(http.StatusMethodNotAllowed))
+		})
+
+		It("rejects invalid JSON", func() {
+			store := &mockStore{}
+			handler := http.HandlerFunc(main.FilterHandler(store))
+
+			req, _ = http.NewRequest(http.MethodPost, "/filter", strings.NewReader(`invalid json`))
+			req.Header.Set("Content-Type", "application/json")
+
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr).To(HaveHTTPStatus(http.StatusBadRequest))
 		})
 	})
 })

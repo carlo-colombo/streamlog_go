@@ -27,6 +27,7 @@ func main() {
 	http.Handle("/", http.FileServer(http.FS(fsys)))
 	http.HandleFunc("/clients", ClientsHandler(store))
 	http.HandleFunc("/logs", LogsHandler(store))
+	http.HandleFunc("/filter", FilterHandler(store))
 
 	listener, _ := net.Listen("tcp", fmt.Sprintf(":%s", *port))
 

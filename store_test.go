@@ -20,9 +20,7 @@ var _ = Describe("InMemoryLogsStore", func() {
 
 	BeforeEach(func() {
 		r, w = io.Pipe()
-
 		store = main.NewStore()
-
 		go store.Scan(r)
 	})
 
@@ -32,22 +30,46 @@ var _ = Describe("InMemoryLogsStore", func() {
 			_, _ = fmt.Fprintln(w, "New World")
 		}()
 
+		Eventually(store.List).Should(SatisfyAll(
+			HaveLen(2),
+			ContainElements(
+				WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World")),
+				WithTransform(func(l logentry.Log) string { return l.Line }, Equal("New World")),
+			),
+		))
+	})
+
+	It("filters logs based on case-insensitive search", func() {
+		go func() {
+			_, _ = fmt.Fprintln(w, "Hello World")
+			_, _ = fmt.Fprintln(w, "New World")
+			_, _ = fmt.Fprintln(w, "Another Line")
+		}()
+
+		Eventually(store.List).Should(HaveLen(3))
+
+		go store.SetFilter("world")
 		Eventually(store.List).Should(HaveLen(2))
 		Eventually(store.List).Should(ContainElements(
 			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World")),
 			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("New World")),
 		))
+
+		go store.SetFilter("")
+		Eventually(store.List).Should(HaveLen(3))
 	})
 
 	It("provide a channel that emits logs", func() {
+		client := store.LineFor("foo")
+
 		go func() {
 			_, _ = fmt.Fprintln(w, "Hello World")
 			_, _ = fmt.Fprintln(w, "New World")
 		}()
 
-		Eventually(store.LineFor("foo")).Should(Receive(
+		Eventually(client).Should(Receive(
 			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World"))))
-		Eventually(store.LineFor("foo")).Should(Receive(
+		Eventually(client).Should(Receive(
 			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("New World"))))
 	})
 
@@ -59,10 +81,22 @@ var _ = Describe("InMemoryLogsStore", func() {
 			_, _ = fmt.Fprintln(w, "Hello World")
 		}()
 
-		Eventually(clientA, "2s").Should(Receive(
-			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World"))))
-		Eventually(clientB, "2s").Should(Receive(
-			WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World"))))
+		logsCh := make(chan string)
+
+		// collect logs from both clients
+		go func() {
+			for {
+				select {
+				case l := <-clientA:
+					logsCh <- l.Line
+				case l := <-clientB:
+					logsCh <- l.Line
+				}
+			}
+		}()
+
+		Eventually(logsCh).Should(Receive(Equal("Hello World")))
+		Eventually(logsCh).Should(Receive(Equal("Hello World")))
 	})
 
 	It("removes client when disconnecting", func() {
@@ -75,10 +109,64 @@ var _ = Describe("InMemoryLogsStore", func() {
 
 		store.Disconnect("client A")
 
+		Expect(store.Clients()).ToNot(ContainElements("client A"))
+	})
+
+	It("stores all logs regardless of filter", func() {
+		// Set up filter change channel
+		filterChangeCh := store.FilterChangeFor()
+
+		// Set initial filter and wait for it to be applied
+		go store.SetFilter("world")
+		Eventually(filterChangeCh).Should(Receive())
+
+		// Write logs after filter is set
 		go func() {
-			_, _ = fmt.Fprintln(w, "Hello World 2")
+			_, _ = fmt.Fprintln(w, "Hello World")
+			_, _ = fmt.Fprintln(w, "Another Line")
+			_, _ = fmt.Fprintln(w, "New World")
 		}()
 
-		Expect(store.Clients()).ToNot(ContainElements("client A"))
+		// Wait for filtered results
+		Eventually(func(g Gomega) {
+			g.Expect(store.List()).To(SatisfyAll(
+				HaveLen(2),
+				ContainElements(
+					WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World")),
+					WithTransform(func(l logentry.Log) string { return l.Line }, Equal("New World")),
+				),
+			))
+		}, "2s", "0.5s").Should(Succeed())
+
+		// Clear filter and wait for it to be applied
+		go store.SetFilter("")
+		Eventually(filterChangeCh).Should(Receive())
+
+		// Wait for unfiltered results
+		Eventually(func(g Gomega) {
+			g.Expect(store.List()).To(HaveLen(3))
+			g.Expect(store.List()).To(ContainElements(
+				WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World")),
+				WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Another Line")),
+				WithTransform(func(l logentry.Log) string { return l.Line }, Equal("New World")),
+			))
+		}, "2s").Should(Succeed())
+	})
+
+	It("emits a signal when filter changes", func() {
+		// Get the filter change channel for a client
+		filterChangeCh := store.FilterChangeFor()
+
+		// Set initial filter
+		go store.SetFilter("world")
+		Eventually(filterChangeCh).Should(Receive())
+
+		// Change filter to empty
+		go store.SetFilter("")
+		Eventually(filterChangeCh).Should(Receive())
+
+		// Change filter to new value
+		go store.SetFilter("test")
+		Eventually(filterChangeCh).Should(Receive())
 	})
 })

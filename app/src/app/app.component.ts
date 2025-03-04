@@ -4,18 +4,25 @@ import {SseClient} from 'ngx-sse-client';
 import {HttpHeaders} from '@angular/common/http';
 import {NgFor} from '@angular/common';
 import {DomSanitizer, SafeHtml} from '@angular/platform-browser';
+import {FormsModule} from '@angular/forms';
+import {HttpClient} from '@angular/common/http';
 
 @Component({
   selector: 'app-root',
-  imports: [NgFor],
+  imports: [NgFor, FormsModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
 export class AppComponent implements OnInit {
   title = 'app';
   lines: SafeHtml[] = []
+  filter: string = ''
 
-  constructor(private sseClient: SseClient, private sanitizer: DomSanitizer) {
+  constructor(
+    private sseClient: SseClient,
+    private sanitizer: DomSanitizer,
+    private http: HttpClient
+  ) {
     const headers = new HttpHeaders().set('Authorization', `Basic YWRtaW46YWRtaW4=`);
 
     this.sseClient.stream('/logs?sse', {
@@ -29,15 +36,23 @@ export class AppComponent implements OnInit {
           console.error(errorEvent.error, errorEvent.message);
         } else {
           const messageEvent = event as MessageEvent;
-
-          this.lines.unshift(this.sanitizer.bypassSecurityTrustHtml( messageEvent.data));
-
-          console.info(`SSE request with type "${messageEvent.type}" and data "${messageEvent.data}"`);
+          
+          if (messageEvent.type === 'reset') {
+            this.lines = [];
+          } else if (messageEvent.data) {
+            this.lines.unshift(this.sanitizer.bypassSecurityTrustHtml(messageEvent.data));
+          }
         }
       });
   }
 
   ngOnInit(): void {
     // throw new Error('Method not implemented.');
+  }
+
+  updateFilter() {
+    this.http.post('/filter', { filter: this.filter }, {
+      headers: new HttpHeaders().set('Authorization', `Basic YWRtaW46YWRtaW4=`)
+    }).subscribe();
   }
 }

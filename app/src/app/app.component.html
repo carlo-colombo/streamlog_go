@@ -1,5 +1,13 @@
-
 <h1>Streamlog</h1>
+
+<div class="filter-container">
+  <input 
+    type="text" 
+    [(ngModel)]="filter" 
+    (ngModelChange)="updateFilter()"
+    placeholder="Filter logs..."
+  >
+</div>
 
 <table>
   <tr *ngFor="let line of lines" [innerHTML]="line">

@@ -2,10 +2,11 @@ package sse
 
 import (
 	"fmt"
-	"github.com/carlo-colombo/streamlog_go/logentry"
 	"html/template"
 	"io"
 	"strings"
+
+	"github.com/carlo-colombo/streamlog_go/logentry"
 )
 
 type Encoder struct {
