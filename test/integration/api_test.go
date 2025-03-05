@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,6 +27,15 @@ var _ = Describe("Test/Integration/Streamlog", func() {
 		resp, err := http.Get(getTargetUrl(session.Err) + "/logs")
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(200))
+	})
+
+	It("report an error when the port is already in use", func() {
+		port := "32324"
+		session = runBin([]string{"--port", port}, io.NopCloser(bytes.NewReader([]byte(""))))
+		Eventually(session.Err).Should(Say("Starting on http://localhost:" + port))
+
+		session = runBin([]string{"--port", port}, io.NopCloser(bytes.NewReader([]byte(""))))
+		Eventually(session.Err).Should(Say("Failed to start server: listen tcp :" + port + ": bind: address already in use"))
 	})
 
 	Describe("API", func() {

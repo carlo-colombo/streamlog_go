@@ -25,9 +25,12 @@ func main() {
 	http.HandleFunc("/logs", LogsHandler(store))
 	http.HandleFunc("/filter", FilterHandler(store))
 
-	listener, _ := net.Listen("tcp", fmt.Sprintf(":%s", *port))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", *port))
+	if err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 
-	_, err := fmt.Fprintf(os.Stderr, "Starting on http://localhost:%d\n", listener.Addr().(*net.TCPAddr).Port)
+	_, err = fmt.Fprintf(os.Stderr, "Starting on http://localhost:%d\n", listener.Addr().(*net.TCPAddr).Port)
 
 	if err != nil {
 		log.Fatal(err)
