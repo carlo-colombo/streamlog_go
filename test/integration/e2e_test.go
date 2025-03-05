@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/carlo-colombo/streamlog_go/test/playwrightmatchers"
 	. "github.com/carlo-colombo/streamlog_go/test/playwrightmatchers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -44,7 +43,7 @@ var _ = Describe("e2e tests", func() {
 			_, err = page.Goto(targetUrl)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			Expect(page).To(HaveSelector("h1"))
+			Expect(page.Locator("h1")).To(BeVisible())
 			Expect(page).To(HaveText("Streamlog"))
 
 			_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
@@ -61,7 +60,7 @@ var _ = Describe("e2e tests", func() {
 
 			By("setting a filter")
 			filterInput := page.Locator("input[placeholder='Filter logs...']")
-			Expect(filterInput).To(playwrightmatchers.BeVisible())
+			Expect(filterInput).To(BeVisible())
 
 			err = filterInput.Fill("stdin")
 			Expect(err).ShouldNot(HaveOccurred())
