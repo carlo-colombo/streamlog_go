@@ -1,0 +1,38 @@
+.table-container {
+  padding: 0 1rem;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Courier New', Courier, monospace;
+    table-layout: fixed;
+
+    tr {
+      padding: 0.5rem;
+
+      &:nth-child(even) {
+        background-color: var(--color-background-even);
+      }
+
+      &:nth-child(odd) {
+        background-color: var(--color-background-odd);
+      }
+
+      td.timestamp {
+        width: 200px;
+        color: var(--color-text-secondary);
+        font-size: 0.9em;
+        padding: 0.5rem;
+        vertical-align: top;
+      }
+
+      td.message {
+        padding: 0.5rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+        vertical-align: top;
+        width: calc(100% - 200px);
+      }
+    }
+  }
+} 

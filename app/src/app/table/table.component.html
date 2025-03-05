@@ -1,0 +1,8 @@
+<div class="table-container">
+  <table>
+    <tr *ngFor="let log of logs">
+      <td class="timestamp">{{formatTimestamp(log.timestamp)}}</td>
+      <td class="message">{{log.line}}</td>
+    </tr>
+  </table>
+</div> 

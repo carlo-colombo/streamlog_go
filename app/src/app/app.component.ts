@@ -2,10 +2,8 @@ import {Component, OnInit} from '@angular/core';
 import {RouterOutlet} from '@angular/router';
 import {SseClient} from 'ngx-sse-client';
 import {HttpHeaders} from '@angular/common/http';
-import {NgFor} from '@angular/common';
-import {DomSanitizer, SafeHtml} from '@angular/platform-browser';
-import {FormsModule} from '@angular/forms';
-import {HttpClient} from '@angular/common/http';
+import {FilterComponent} from './filter/filter.component';
+import {TableComponent} from './table/table.component';
 
 interface LogEntry {
   line: string;
@@ -14,19 +12,17 @@ interface LogEntry {
 
 @Component({
   selector: 'app-root',
-  imports: [NgFor, FormsModule],
+  standalone: true,
+  imports: [FilterComponent, TableComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
 export class AppComponent implements OnInit {
   title = 'app';
   logs: LogEntry[] = [];
-  filter: string = '';
 
   constructor(
     private sseClient: SseClient,
-    private sanitizer: DomSanitizer,
-    private http: HttpClient
   ) {
     const headers = new HttpHeaders().set('Authorization', `Basic YWRtaW46YWRtaW4=`);
 
@@ -54,12 +50,6 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     // throw new Error('Method not implemented.');
-  }
-
-  updateFilter() {
-    this.http.post('/filter', { filter: this.filter }, {
-      headers: new HttpHeaders().set('Authorization', `Basic YWRtaW46YWRtaW4=`)
-    }).subscribe();
   }
 
   formatTimestamp(timestamp: string): string {

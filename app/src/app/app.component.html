@@ -1,19 +1,5 @@
 <h1>Streamlog</h1>
 
-<div class="filter-container">
-  <input 
-    type="text" 
-    [(ngModel)]="filter" 
-    (ngModelChange)="updateFilter()"
-    placeholder="Filter logs..."
-  >
-</div>
+<app-filter></app-filter>
 
-<div class="table-container">
-  <table>
-    <tr *ngFor="let log of logs">
-      <td class="timestamp">{{formatTimestamp(log.timestamp)}}</td>
-      <td class="message">{{log.line}}</td>
-    </tr>
-  </table>
-</div>
+<app-table [logs]="logs"></app-table>

@@ -1,0 +1,24 @@
+.filter-container {
+  margin: 1rem 0;
+  padding: 0 1rem;
+
+  input {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+
+    &::placeholder {
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      color: var(--color-text-placeholder);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-border-focus);
+      box-shadow: 0 0 0 2px var(--color-shadow-focus);
+    }
+  }
+}

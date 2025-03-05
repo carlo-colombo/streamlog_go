@@ -1,73 +1,7 @@
-
-
 h1 {
   font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   text-align: center;
   color: var(--color-text-primary);
   margin: 1rem 0;
   font-weight: 600;
-}
-
-.filter-container {
-  margin: 1rem 0;
-  padding: 0 1rem;
-
-  input {
-    width: 100%;
-    padding: 0.5rem;
-    font-size: 1rem;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-
-    &::placeholder {
-      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-      color: var(--color-text-placeholder);
-    }
-
-    &:focus {
-      outline: none;
-      border-color: var(--color-border-focus);
-      box-shadow: 0 0 0 2px var(--color-shadow-focus);
-    }
-  }
-}
-
-.table-container {
-  padding: 0 1rem;
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: 'Courier New', Courier, monospace;
-    table-layout: fixed;
-
-    tr {
-      padding: 0.5rem;
-
-      &:nth-child(even) {
-        background-color: var(--color-background-even);
-      }
-
-      &:nth-child(odd) {
-        background-color: var(--color-background-odd);
-      }
-
-      td.timestamp {
-        width: 200px;
-        color: var(--color-text-secondary);
-        font-size: 0.9em;
-        padding: 0.5rem;
-        vertical-align: top;
-      }
-
-      td.message {
-        padding: 0.5rem;
-        white-space: pre-wrap;
-        word-break: break-word;
-        vertical-align: top;
-        width: calc(100% - 200px);
-      }
-    }
-  }
 }
