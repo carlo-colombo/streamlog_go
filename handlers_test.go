@@ -3,10 +3,12 @@ package main_test
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"time"
 
 	main "github.com/carlo-colombo/streamlog_go"
 	"github.com/carlo-colombo/streamlog_go/logentry"
@@ -36,7 +38,10 @@ func (m *mockStore) List() []logentry.Log {
 	var l []logentry.Log
 
 	for _, line := range m.logs {
-		l = append(l, logentry.Log{Line: line})
+		l = append(l, logentry.Log{
+			Line:      line,
+			Timestamp: time.Now(),
+		})
 	}
 	return l
 }
@@ -111,7 +116,7 @@ var _ = Describe("Handlers", func() {
 	})
 
 	Describe("logs handler", func() {
-		It("writes the collected logs", func() {
+		It("writes the collected logs as JSON", func() {
 			var store = &mockStore{logs: []string{"log1", "log2"}}
 			clientsHandlerFunc := main.LogsHandler(store)
 
@@ -128,14 +133,20 @@ var _ = Describe("Handlers", func() {
 				scanner.Split(utils.ScanEvent)
 
 				g.Expect(scanner.Scan()).To(BeTrue())
-				g.Expect(scanner.Text()).To(MatchRegexp("data:.*log1"))
+				var log1 logentry.Log
+				err := json.Unmarshal([]byte(strings.TrimPrefix(scanner.Text(), "data: ")), &log1)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(log1.Line).To(Equal("log1"))
 
 				g.Expect(scanner.Scan()).To(BeTrue())
-				g.Expect(scanner.Text()).To(MatchRegexp("data:.*log2"))
+				var log2 logentry.Log
+				err = json.Unmarshal([]byte(strings.TrimPrefix(scanner.Text(), "data: ")), &log2)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(log2.Line).To(Equal("log2"))
 			}).Should(Succeed())
 		})
 
-		It("streams additional logs", func() {
+		It("streams additional logs as JSON", func() {
 			var store = &mockStore{logsCh: make(chan logentry.Log)}
 			clientsHandlerFunc := main.LogsHandler(store)
 
@@ -146,7 +157,7 @@ var _ = Describe("Handlers", func() {
 			}()
 
 			go func() {
-				store.logsCh <- logentry.Log{Line: "log1"}
+				store.logsCh <- logentry.Log{Line: "log1", Timestamp: time.Now()}
 			}()
 
 			Expect(rr).To(HaveHTTPStatus(http.StatusOK))
@@ -156,7 +167,10 @@ var _ = Describe("Handlers", func() {
 				scanner.Split(utils.ScanEvent)
 
 				g.Expect(scanner.Scan()).To(BeTrue())
-				g.Expect(scanner.Text()).To(MatchRegexp("data:.*log1"))
+				var log logentry.Log
+				err := json.Unmarshal([]byte(strings.TrimPrefix(scanner.Text(), "data: ")), &log)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(log.Line).To(Equal("log1"))
 			}).Should(Succeed())
 		})
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"embed"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -10,9 +9,6 @@ import (
 	"net/http"
 	"os"
 )
-
-//go:embed templates
-var templates embed.FS
 
 func main() {
 	port := flag.String("port", "0", "port")

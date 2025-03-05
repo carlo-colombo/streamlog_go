@@ -22,9 +22,7 @@ func LogsHandler(store Store) func(http.ResponseWriter, *http.Request) {
 		flusher, _ := w.(http.Flusher)
 
 		w.Header().Set("Content-Type", "text/event-stream")
-
-		data, _ := templates.ReadFile("templates/log.html")
-		encoder := sse.NewEncoder(w, string(data))
+		encoder := sse.NewEncoder(w)
 
 		flusher.Flush()
 

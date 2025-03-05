@@ -1,23 +1,20 @@
 package sse
 
 import (
+	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
-	"strings"
 
 	"github.com/carlo-colombo/streamlog_go/logentry"
 )
 
 type Encoder struct {
 	writer io.Writer
-	line   string
 }
 
-func NewEncoder(w io.Writer, line string) Encoder {
+func NewEncoder(w io.Writer) Encoder {
 	return Encoder{
-		w,
-		strings.ReplaceAll(line, "\n", ""),
+		writer: w,
 	}
 }
 
@@ -27,11 +24,11 @@ func (e Encoder) Encode(v any) error {
 		return fmt.Errorf("encoder can only encode a log object")
 	}
 
-	logTmpl := template.Must(template.New("log").Parse(e.line))
+	data, err := json.Marshal(l)
+	if err != nil {
+		return fmt.Errorf("failed to marshal log entry: %w", err)
+	}
 
-	fmt.Fprintf(e.writer, "data: ")
-	logTmpl.Execute(e.writer, l)
-	fmt.Fprint(e.writer, "\n\n")
-
+	fmt.Fprintf(e.writer, "data: %s\n\n", string(data))
 	return nil
 }

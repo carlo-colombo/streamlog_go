@@ -7,6 +7,11 @@ import {DomSanitizer, SafeHtml} from '@angular/platform-browser';
 import {FormsModule} from '@angular/forms';
 import {HttpClient} from '@angular/common/http';
 
+interface LogEntry {
+  line: string;
+  timestamp: string;
+}
+
 @Component({
   selector: 'app-root',
   imports: [NgFor, FormsModule],
@@ -15,8 +20,8 @@ import {HttpClient} from '@angular/common/http';
 })
 export class AppComponent implements OnInit {
   title = 'app';
-  lines: SafeHtml[] = []
-  filter: string = ''
+  logs: LogEntry[] = [];
+  filter: string = '';
 
   constructor(
     private sseClient: SseClient,
@@ -38,9 +43,10 @@ export class AppComponent implements OnInit {
           const messageEvent = event as MessageEvent;
           
           if (messageEvent.type === 'reset') {
-            this.lines = [];
+            this.logs = [];
           } else if (messageEvent.data) {
-            this.lines.unshift(this.sanitizer.bypassSecurityTrustHtml(messageEvent.data));
+            const logEntry: LogEntry = JSON.parse(messageEvent.data);
+            this.logs.unshift(logEntry);
           }
         }
       });
@@ -54,5 +60,9 @@ export class AppComponent implements OnInit {
     this.http.post('/filter', { filter: this.filter }, {
       headers: new HttpHeaders().set('Authorization', `Basic YWRtaW46YWRtaW4=`)
     }).subscribe();
+  }
+
+  formatTimestamp(timestamp: string): string {
+    return new Date(timestamp).toLocaleString();
   }
 }
