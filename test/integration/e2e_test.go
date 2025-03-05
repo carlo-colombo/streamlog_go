@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/carlo-colombo/streamlog_go/test/playwrightmatchers"
 	. "github.com/carlo-colombo/streamlog_go/test/playwrightmatchers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,7 +32,9 @@ var _ = Describe("e2e tests", func() {
 			pw, err := playwright.Run()
 			Expect(err).ShouldNot(HaveOccurred())
 
-			browser, err := pw.Chromium.Launch()
+			browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
+				Headless: playwright.Bool(false),
+			})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			page, err := browser.NewPage()
@@ -55,6 +58,34 @@ var _ = Describe("e2e tests", func() {
 			By("sending an additional line to stdin and prepending to the content")
 			_, _ = fmt.Fprintln(stdinWriter, "bonus line from stdin")
 			Expect(page.Locator("table tr:first-child td.message")).To(HaveText("bonus line from stdin"))
+
+			By("setting a filter")
+			filterInput := page.Locator("input[placeholder='Filter logs...']")
+			Expect(filterInput).To(playwrightmatchers.BeVisible())
+
+			err = filterInput.Fill("stdin")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			By("checking that the logs are filtered correctly")
+			Expect(page.Locator("table tr")).To(HaveCount(2))
+			Expect(page.Locator("table tr:first-child td.message")).To(HaveText("bonus line from stdin"))
+			Expect(page).ToNot(HaveText("and another"))
+
+			_, _ = fmt.Fprintln(stdinWriter, "a new message that should show stdin")
+			_, _ = fmt.Fprintln(stdinWriter, "another new message that should not show")
+
+			By("checking that the logs are filtered correctly")
+			Expect(page.Locator("table tr")).To(HaveCount(3))
+			Expect(page.Locator("table tr:first-child td.message")).To(HaveText("a new message that should show stdin"))
+			Expect(page).ToNot(HaveText("another new message that should not show"))
+
+			By("clearing the filter")
+			err = filterInput.Fill("")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			By("checking that all logs are shown")
+			Expect(page.Locator("table tr")).To(HaveCount(5))
+			Expect(page.Locator("table tr:first-child td.message")).To(HaveText("another new message that should not show"))
 		})
 
 		It("shows logs to multiple connected clients", func() {
