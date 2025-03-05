@@ -58,4 +58,5 @@ docker logs -f container_name | ./streamlog_go
 
 ### Command Line Options
 
-- `--port`: Specify the port to listen on (default: random available port) 
+- `--port`: Specify the port to listen on (default: random available port)
+- `--db`: Path to SQLite database file (default: in-memory database) 

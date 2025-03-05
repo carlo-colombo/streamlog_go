@@ -12,9 +12,14 @@ import (
 
 func main() {
 	port := flag.String("port", "0", "port")
+	dbPath := flag.String("db", ":memory:", "path to SQLite database file (default: in-memory)")
 	flag.Parse()
 
-	store := NewStore()
+	store, err := NewSQLiteStore(*dbPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer store.Close()
 
 	go store.Scan(os.Stdin)
 
