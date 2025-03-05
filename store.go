@@ -36,7 +36,9 @@ func NewStore() *InMemoryLogsStore {
 
 func (s *InMemoryLogsStore) SetFilter(filter string) {
 	s.filter = filter
-	s.filterChangeCh <- struct{}{}
+	if len(s.clients) > 0 {
+		s.filterChangeCh <- struct{}{}
+	}
 }
 
 func (s *InMemoryLogsStore) Scan(r io.Reader) {

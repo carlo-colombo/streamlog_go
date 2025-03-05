@@ -113,21 +113,14 @@ var _ = Describe("InMemoryLogsStore", func() {
 	})
 
 	It("stores all logs regardless of filter", func() {
-		// Set up filter change channel
-		filterChangeCh := store.FilterChangeFor()
+		store.SetFilter("world")
 
-		// Set initial filter and wait for it to be applied
-		go store.SetFilter("world")
-		Eventually(filterChangeCh).Should(Receive())
-
-		// Write logs after filter is set
 		go func() {
 			_, _ = fmt.Fprintln(w, "Hello World")
 			_, _ = fmt.Fprintln(w, "Another Line")
 			_, _ = fmt.Fprintln(w, "New World")
 		}()
 
-		// Wait for filtered results
 		Eventually(func(g Gomega) {
 			g.Expect(store.List()).To(SatisfyAll(
 				HaveLen(2),
@@ -136,13 +129,10 @@ var _ = Describe("InMemoryLogsStore", func() {
 					WithTransform(func(l logentry.Log) string { return l.Line }, Equal("New World")),
 				),
 			))
-		}, "2s", "0.5s").Should(Succeed())
+		}).Should(Succeed())
 
-		// Clear filter and wait for it to be applied
-		go store.SetFilter("")
-		Eventually(filterChangeCh).Should(Receive())
+		store.SetFilter("")
 
-		// Wait for unfiltered results
 		Eventually(func(g Gomega) {
 			g.Expect(store.List()).To(HaveLen(3))
 			g.Expect(store.List()).To(ContainElements(
@@ -150,23 +140,29 @@ var _ = Describe("InMemoryLogsStore", func() {
 				WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Another Line")),
 				WithTransform(func(l logentry.Log) string { return l.Line }, Equal("New World")),
 			))
-		}, "2s").Should(Succeed())
+		}).Should(Succeed())
 	})
 
-	It("emits a signal when filter changes", func() {
+	It("emits a signal when filter changes only if clients are connected", func() {
 		// Get the filter change channel for a client
 		filterChangeCh := store.FilterChangeFor()
 
-		// Set initial filter
+		// Set filter with no clients connected - should not emit signal
 		go store.SetFilter("world")
-		Eventually(filterChangeCh).Should(Receive())
+		Consistently(filterChangeCh).ShouldNot(Receive())
 
-		// Change filter to empty
-		go store.SetFilter("")
-		Eventually(filterChangeCh).Should(Receive())
+		// Connect a client by getting their line channel
+		store.LineFor("client-1")
 
-		// Change filter to new value
+		// Now set filter - should emit signal since client is connected
 		go store.SetFilter("test")
 		Eventually(filterChangeCh).Should(Receive())
+
+		// Disconnect the client
+		store.Disconnect("client-1")
+
+		// Set filter again with no clients - should not emit signal
+		go store.SetFilter("another")
+		Consistently(filterChangeCh).ShouldNot(Receive())
 	})
 })
