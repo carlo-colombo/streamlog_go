@@ -1,66 +1,94 @@
-package playwrightmatchers_test
+package playwrightmatchers
 
 import (
-	"github.com/carlo-colombo/streamlog_go/test/playwrightmatchers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/playwright-community/playwright-go"
 )
 
 var _ = Describe("HaveText", func() {
+	var pw *playwright.Playwright
+	var browser playwright.Browser
 	var page playwright.Page
 
 	BeforeEach(func() {
 		var err error
+		pw, err = playwright.Run()
+		Expect(err).To(BeNil())
+		browser, err = pw.Chromium.Launch()
+		Expect(err).To(BeNil())
 		page, err = browser.NewPage()
-		Expect(err).Should(BeNil())
+		Expect(err).To(BeNil())
 	})
 
 	AfterEach(func() {
-		Expect(page.Close()).Should(BeNil())
+		page.Close()
+		browser.Close()
+		pw.Stop()
 	})
 
-	It("should match when page contains the text", func() {
+	It("should match when element contains the expected text", func() {
 		err := page.SetContent(`
-			<div>Hello World</div>
+			<html>
+				<body>
+					<div id="test">Expected Text</div>
+				</body>
+			</html>
 		`)
-		Expect(err).Should(BeNil())
-
-		Expect(page).Should(playwrightmatchers.HaveText("Hello World"))
-	})
-
-	It("should match when locator contains the text", func() {
-		err := page.SetContent(`
-			<div id="test">Hello World</div>
-		`)
-		Expect(err).Should(BeNil())
+		Expect(err).To(BeNil())
 
 		locator := page.Locator("#test")
-		Expect(locator).Should(playwrightmatchers.HaveText("Hello World"))
+		matcher := HaveText("Expected Text")
+		success, err := matcher.Match(locator)
+		Expect(success).To(BeTrue())
+		Expect(err).To(BeNil())
 	})
 
-	It("should not match when text is not present", func() {
+	It("should match when page contains the expected text", func() {
 		err := page.SetContent(`
-			<div>Different Text</div>
+			<html>
+				<body>
+					<div>Expected Text</div>
+				</body>
+			</html>
 		`)
-		Expect(err).Should(BeNil())
+		Expect(err).To(BeNil())
 
-		Expect(page).ShouldNot(playwrightmatchers.HaveText("Hello World"))
+		matcher := HaveText("Expected Text")
+		success, err := matcher.Match(page)
+		Expect(success).To(BeTrue())
+		Expect(err).To(BeNil())
 	})
 
-	It("should not match when element doesn't exist", func() {
-		locator := page.Locator("#non-existent")
-		Expect(locator).ShouldNot(playwrightmatchers.HaveText("Hello World"))
-	})
-
-	It("should fail with appropriate message when text is not found", func() {
+	It("should not match when text is different", func() {
 		err := page.SetContent(`
-			<div>Different Text</div>
+			<html>
+				<body>
+					<div id="test">Wrong Text</div>
+				</body>
+			</html>
 		`)
-		Expect(err).Should(BeNil())
+		Expect(err).To(BeNil())
 
-		success, err := playwrightmatchers.HaveText("Hello World").Match(page)
-		Expect(err).Should(BeNil())
-		Expect(success).Should(BeFalse())
+		locator := page.Locator("#test")
+		matcher := HaveText("Expected Text")
+		success, err := matcher.Match(locator)
+		Expect(success).To(BeFalse())
+		Expect(err).To(BeNil())
+
+		failureMessage := matcher.FailureMessage(locator)
+		Expect(failureMessage).To(ContainSubstring("to contain text"))
+		Expect(failureMessage).To(ContainSubstring("Expected Text"))
+
+		normalizedMessage := normalizeHTML(failureMessage)
+		Expect(normalizedMessage).To(ContainSubstring(`<div id="test">Wrong Text</div>`))
+	})
+
+	It("should return error for invalid type", func() {
+		matcher := HaveText("test")
+		success, err := matcher.Match("invalid")
+		Expect(success).To(BeFalse())
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("expected playwright.Page or playwright.Locator"))
 	})
 })

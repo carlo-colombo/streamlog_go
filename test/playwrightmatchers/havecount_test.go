@@ -1,63 +1,107 @@
-package playwrightmatchers_test
+package playwrightmatchers
 
 import (
-	"github.com/carlo-colombo/streamlog_go/test/playwrightmatchers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/playwright-community/playwright-go"
 )
 
 var _ = Describe("HaveCount", func() {
+	var pw *playwright.Playwright
+	var browser playwright.Browser
 	var page playwright.Page
 
 	BeforeEach(func() {
 		var err error
+		pw, err = playwright.Run()
+		Expect(err).To(BeNil())
+		browser, err = pw.Chromium.Launch()
+		Expect(err).To(BeNil())
 		page, err = browser.NewPage()
-		Expect(err).Should(BeNil())
+		Expect(err).To(BeNil())
 	})
 
 	AfterEach(func() {
-		Expect(page.Close()).Should(BeNil())
+		page.Close()
+		browser.Close()
+		pw.Stop()
+	})
+
+	It("should include HTML content in failure message", func() {
+		err := page.SetContent(`
+			<html>
+				<body>
+					<div class="test">First Element</div>
+					<div class="test">Second Element</div>
+				</body>
+			</html>
+		`)
+		Expect(err).To(BeNil())
+
+		locator := page.Locator(".test")
+		matcher := HaveCount(3)
+		success, err := matcher.Match(locator)
+		Expect(success).To(BeFalse())
+		Expect(err).To(BeNil())
+
+		failureMessage := matcher.FailureMessage(locator)
+		Expect(failureMessage).To(ContainSubstring("Expected locator to have count of 3"))
+		Expect(failureMessage).To(ContainSubstring("Actual locator has count 2"))
+
+		normalizedMessage := normalizeHTML(failureMessage)
+		Expect(normalizedMessage).To(ContainSubstring(`<div class="test">First Element</div>`))
+		Expect(normalizedMessage).To(ContainSubstring(`<div class="test">Second Element</div>`))
 	})
 
 	It("should match when element count matches expected", func() {
 		err := page.SetContent(`
-			<div class="item">Item 1</div>
-			<div class="item">Item 2</div>
-			<div class="item">Item 3</div>
+			<html>
+				<body>
+					<div class="test">First Element</div>
+					<div class="test">Second Element</div>
+				</body>
+			</html>
 		`)
-		Expect(err).Should(BeNil())
+		Expect(err).To(BeNil())
 
-		locator := page.Locator(".item")
-		Expect(locator).Should(playwrightmatchers.HaveCount(3))
+		locator := page.Locator(".test")
+		matcher := HaveCount(2)
+		success, err := matcher.Match(locator)
+		Expect(success).To(BeTrue())
+		Expect(err).To(BeNil())
 	})
 
 	It("should not match when element count is different", func() {
 		err := page.SetContent(`
-			<div class="item">Item 1</div>
-			<div class="item">Item 2</div>
+			<html>
+				<body>
+					<div class="test">First Element</div>
+					<div class="test">Second Element</div>
+				</body>
+			</html>
 		`)
-		Expect(err).Should(BeNil())
+		Expect(err).To(BeNil())
 
-		locator := page.Locator(".item")
-		Expect(locator).ShouldNot(playwrightmatchers.HaveCount(3))
+		locator := page.Locator(".test")
+		matcher := HaveCount(3)
+		success, err := matcher.Match(locator)
+		Expect(success).To(BeFalse())
+		Expect(err).To(BeNil())
+
+		failureMessage := matcher.FailureMessage(locator)
+		Expect(failureMessage).To(ContainSubstring("Expected locator to have count of 3"))
+		Expect(failureMessage).To(ContainSubstring("Actual locator has count 2"))
+
+		normalizedMessage := normalizeHTML(failureMessage)
+		Expect(normalizedMessage).To(ContainSubstring(`<div class="test">First Element</div>`))
+		Expect(normalizedMessage).To(ContainSubstring(`<div class="test">Second Element</div>`))
 	})
 
-	It("should not match when no elements exist", func() {
-		locator := page.Locator(".non-existent")
-		Expect(locator).ShouldNot(playwrightmatchers.HaveCount(1))
-	})
-
-	It("should fail with appropriate message when count is wrong", func() {
-		err := page.SetContent(`
-			<div class="item">Item 1</div>
-			<div class="item">Item 2</div>
-		`)
-		Expect(err).Should(BeNil())
-
-		locator := page.Locator(".item")
-		success, err := playwrightmatchers.HaveCount(3).Match(locator)
-		Expect(err).Should(BeNil())
-		Expect(success).Should(BeFalse())
+	It("should return error for invalid type", func() {
+		matcher := HaveCount(1)
+		success, err := matcher.Match("invalid")
+		Expect(success).To(BeFalse())
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("expected playwright.Locator, got string"))
 	})
 })

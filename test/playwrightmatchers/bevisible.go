@@ -24,11 +24,19 @@ func (b beVisibleMatcher) Match(actual any) (success bool, err error) {
 	return err == nil, nil
 }
 
-func (b beVisibleMatcher) FailureMessage(_ any) (message string) {
+func (b beVisibleMatcher) FailureMessage(actual any) (message string) {
+	content, err := PrettyPrintHTML(actual)
+	if err == nil {
+		return fmt.Sprintf("Expected element to be visible within %v\nPage content:\n%s", b.timeout, content)
+	}
 	return fmt.Sprintf("Expected element to be visible within %v", b.timeout)
 }
 
-func (b beVisibleMatcher) NegatedFailureMessage(_ any) (message string) {
+func (b beVisibleMatcher) NegatedFailureMessage(actual any) (message string) {
+	content, err := PrettyPrintHTML(actual)
+	if err == nil {
+		return fmt.Sprintf("Expected element to not be visible within %v\nPage content:\n%s", b.timeout, content)
+	}
 	return fmt.Sprintf("Expected element to not be visible within %v", b.timeout)
 }
 

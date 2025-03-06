@@ -6,7 +6,6 @@ import (
 
 	"github.com/onsi/gomega/types"
 	"github.com/playwright-community/playwright-go"
-	"github.com/yosssi/gohtml"
 )
 
 type haveTextMatcher struct {
@@ -30,27 +29,22 @@ func (h haveTextMatcher) Match(actual any) (success bool, err error) {
 	err = expect.Locator(locator).ToHaveText(h.text, playwright.LocatorAssertionsToHaveTextOptions{
 		Timeout: playwright.Float(float64(h.timeout.Milliseconds())),
 	})
-
-	if err != nil {
-		page, err := locator.Page()
-		if err != nil {
-			return false, fmt.Errorf("cannot retrieve page: %w", err)
-		}
-		content, err := page.Content()
-		if err != nil {
-			return false, fmt.Errorf("cannot retrieve page content: %w", err)
-		}
-
-		fmt.Println(gohtml.Format(content))
-	}
 	return err == nil, nil
 }
 
 func (h haveTextMatcher) FailureMessage(actual any) (message string) {
+	content, err := PrettyPrintHTML(actual)
+	if err == nil {
+		return fmt.Sprintf("Expected\n\t%#v\nto contain text \n\t%#v\nwithin %v\nPage content:\n%s", actual, h.text, h.timeout, content)
+	}
 	return fmt.Sprintf("Expected\n\t%#v\nto contain text \n\t%#v\nwithin %v", actual, h.text, h.timeout)
 }
 
 func (h haveTextMatcher) NegatedFailureMessage(actual any) (message string) {
+	content, err := PrettyPrintHTML(actual)
+	if err == nil {
+		return fmt.Sprintf("Expected\n\t%#v\nnot to contain text \n\t%#v\nwithin %v\nPage content:\n%s", actual, h.text, h.timeout, content)
+	}
 	return fmt.Sprintf("Expected\n\t%#v\nnot to contain text \n\t%#v\nwithin %v", actual, h.text, h.timeout)
 }
 

@@ -29,13 +29,29 @@ func (h *haveCount) Match(actual any) (success bool, err error) {
 	return err == nil, nil
 }
 
-func (h *haveCount) FailureMessage(_ any) (message string) {
+func (h *haveCount) FailureMessage(actual any) (message string) {
+	content, err := PrettyPrintHTML(actual)
+	if err == nil {
+		return fmt.Sprintf(`Expected locator to have count of %d
+Actual locator has count %d
+within %v
+Page content:
+%s`, h.expected, h.actual, h.timeout, content)
+	}
 	return fmt.Sprintf(`Expected locator to have count of %d
 Actual locator has count %d
 within %v`, h.expected, h.actual, h.timeout)
 }
 
-func (h *haveCount) NegatedFailureMessage(_ any) (message string) {
+func (h *haveCount) NegatedFailureMessage(actual any) (message string) {
+	content, err := PrettyPrintHTML(actual)
+	if err == nil {
+		return fmt.Sprintf(`Expected locator to not have count %d
+Actual locator has count of %d
+within %v
+Page content:
+%s`, h.expected, h.actual, h.timeout, content)
+	}
 	return fmt.Sprintf(`Expected locator to not have count %d
 Actual locator has count of %d
 within %v`, h.expected, h.actual, h.timeout)

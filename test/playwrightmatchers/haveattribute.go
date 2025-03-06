@@ -27,10 +27,18 @@ func (h haveAttributeMatcher) Match(actual any) (success bool, err error) {
 }
 
 func (h haveAttributeMatcher) FailureMessage(actual any) (message string) {
+	content, err := PrettyPrintHTML(actual)
+	if err == nil {
+		return fmt.Sprintf("Expected\n\t%#v\nto have attribute %s=%s within %v\nPage content:\n%s", actual, h.name, h.value, h.timeout, content)
+	}
 	return fmt.Sprintf("Expected\n\t%#v\nto have attribute %s=%s within %v", actual, h.name, h.value, h.timeout)
 }
 
 func (h haveAttributeMatcher) NegatedFailureMessage(actual any) (message string) {
+	content, err := PrettyPrintHTML(actual)
+	if err == nil {
+		return fmt.Sprintf("Expected\n\t%#v\nnot to have attribute %s=%s within %v\nPage content:\n%s", actual, h.name, h.value, h.timeout, content)
+	}
 	return fmt.Sprintf("Expected\n\t%#v\nnot to have attribute %s=%s within %v", actual, h.name, h.value, h.timeout)
 }
 
