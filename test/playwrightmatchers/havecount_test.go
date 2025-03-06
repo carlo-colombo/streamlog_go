@@ -1,31 +1,12 @@
-package playwrightmatchers
+package playwrightmatchers_test
 
 import (
+	"github.com/carlo-colombo/streamlog_go/test/playwrightmatchers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/playwright-community/playwright-go"
 )
 
 var _ = Describe("HaveCount", func() {
-	var pw *playwright.Playwright
-	var browser playwright.Browser
-	var page playwright.Page
-
-	BeforeEach(func() {
-		var err error
-		pw, err = playwright.Run()
-		Expect(err).To(BeNil())
-		browser, err = pw.Chromium.Launch()
-		Expect(err).To(BeNil())
-		page, err = browser.NewPage()
-		Expect(err).To(BeNil())
-	})
-
-	AfterEach(func() {
-		page.Close()
-		browser.Close()
-		pw.Stop()
-	})
 
 	It("should include HTML content in failure message", func() {
 		err := page.SetContent(`
@@ -39,7 +20,7 @@ var _ = Describe("HaveCount", func() {
 		Expect(err).To(BeNil())
 
 		locator := page.Locator(".test")
-		matcher := HaveCount(3)
+		matcher := playwrightmatchers.HaveCount(3)
 		success, err := matcher.Match(locator)
 		Expect(success).To(BeFalse())
 		Expect(err).To(BeNil())
@@ -65,7 +46,7 @@ var _ = Describe("HaveCount", func() {
 		Expect(err).To(BeNil())
 
 		locator := page.Locator(".test")
-		matcher := HaveCount(2)
+		matcher := playwrightmatchers.HaveCount(2)
 		success, err := matcher.Match(locator)
 		Expect(success).To(BeTrue())
 		Expect(err).To(BeNil())
@@ -83,7 +64,7 @@ var _ = Describe("HaveCount", func() {
 		Expect(err).To(BeNil())
 
 		locator := page.Locator(".test")
-		matcher := HaveCount(3)
+		matcher := playwrightmatchers.HaveCount(3)
 		success, err := matcher.Match(locator)
 		Expect(success).To(BeFalse())
 		Expect(err).To(BeNil())
@@ -98,7 +79,7 @@ var _ = Describe("HaveCount", func() {
 	})
 
 	It("should return error for invalid type", func() {
-		matcher := HaveCount(1)
+		matcher := playwrightmatchers.HaveCount(1)
 		success, err := matcher.Match("invalid")
 		Expect(success).To(BeFalse())
 		Expect(err).To(HaveOccurred())

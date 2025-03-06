@@ -10,6 +10,7 @@ import (
 
 var pw *playwright.Playwright
 var browser playwright.Browser
+var page playwright.Page
 
 func TestPlaywrightmatchers(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -21,6 +22,22 @@ func TestPlaywrightmatchers(t *testing.T) {
 
 		browser, err = pw.Chromium.Launch()
 		Expect(err).Should(BeNil())
+	})
+
+	BeforeEach(func() {
+		var err error
+		pw, err = playwright.Run()
+		Expect(err).To(BeNil())
+		browser, err = pw.Chromium.Launch()
+		Expect(err).To(BeNil())
+		page, err = browser.NewPage()
+		Expect(err).To(BeNil())
+	})
+
+	AfterEach(func() {
+		page.Close()
+		browser.Close()
+		pw.Stop()
 	})
 
 	AfterSuite(func() {
