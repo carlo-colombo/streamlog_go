@@ -46,17 +46,25 @@ var _ = Describe("e2e tests", func() {
 			Expect(page.Locator("h1")).To(BeVisible())
 			Expect(page).To(HaveText("Streamlog"))
 
-			_, _ = fmt.Fprintln(stdinWriter, "line from stdin")
-			_, _ = fmt.Fprintln(stdinWriter, "and another")
+			lines := []string{
+				"line from stdin",
+				"and another",
+				"bonus line from stdin",
+				"a new message that should show stdin",
+				"another new message that should not show",
+			}
 
-			Expect(page).To(HaveText("line from stdin"))
-			Expect(page).To(HaveText("and another"))
+			_, _ = fmt.Fprintln(stdinWriter, lines[0])
+			_, _ = fmt.Fprintln(stdinWriter, lines[1])
+
+			Expect(page).To(HaveText(lines[0]))
+			Expect(page).To(HaveText(lines[1]))
 
 			Expect(page.Locator("table tr")).To(HaveCount(2))
 
 			By("sending an additional line to stdin and prepending to the content")
-			_, _ = fmt.Fprintln(stdinWriter, "bonus line from stdin")
-			Expect(page.Locator("table tr:first-child td.message")).To(HaveText("bonus line from stdin"))
+			_, _ = fmt.Fprintln(stdinWriter, lines[2])
+			Expect(page.Locator("table tr:first-child td.message")).To(HaveText(lines[2]))
 
 			By("setting a filter")
 			filterInput := page.Locator("input[placeholder='Filter logs...']")
@@ -67,16 +75,17 @@ var _ = Describe("e2e tests", func() {
 
 			By("checking that the logs are filtered correctly")
 			Expect(page.Locator("table tr")).To(HaveCount(2))
-			Expect(page.Locator("table tr:first-child td.message")).To(HaveText("bonus line from stdin"))
-			Expect(page).ToNot(HaveText("and another"))
+			Expect(page.Locator("table tr:first-child td.message")).To(HaveText(lines[2]))
+			Expect(page).ToNot(HaveText(lines[1]))
 
-			_, _ = fmt.Fprintln(stdinWriter, "a new message that should show stdin")
-			_, _ = fmt.Fprintln(stdinWriter, "another new message that should not show")
+			_, _ = fmt.Fprintln(stdinWriter, lines[3])
+			time.Sleep(100 * time.Millisecond)
+			_, _ = fmt.Fprintln(stdinWriter, lines[4])
 
 			By("checking that the logs are filtered correctly")
 			Expect(page.Locator("table tr")).To(HaveCount(3))
-			Expect(page.Locator("table tr:first-child td.message")).To(HaveText("a new message that should show stdin"))
-			Expect(page).ToNot(HaveText("another new message that should not show"))
+			Expect(page.Locator("table tr:first-child td.message")).To(HaveText(lines[3]))
+			Expect(page).ToNot(HaveText(lines[4]))
 
 			By("clearing the filter")
 			err = filterInput.Fill("")
@@ -84,7 +93,7 @@ var _ = Describe("e2e tests", func() {
 
 			By("checking that all logs are shown")
 			Expect(page.Locator("table tr")).To(HaveCount(5))
-			Expect(page.Locator("table tr:first-child td.message")).To(HaveText("another new message that should not show"))
+			Expect(page.Locator("table tr:first-child td.message")).To(HaveText(lines[4]))
 		})
 
 		It("shows logs to multiple connected clients", func() {

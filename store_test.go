@@ -10,40 +10,42 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("InMemoryLogsStore", func() {
-
-	var (
-		r     io.Reader
-		w     *io.PipeWriter
-		store *main.InMemoryLogsStore
-	)
+var _ = Describe("SQLiteStore", func() {
+	var store *main.SQLiteLogsStore
+	var writer *io.PipeWriter
 
 	BeforeEach(func() {
-		r, w = io.Pipe()
-		store = main.NewStore()
+		r, w := io.Pipe()
+		writer = w
+		var err error
+		store, err = main.NewSQLiteStore(":memory:")
+		Expect(err).ToNot(HaveOccurred())
 		go store.Scan(r)
 	})
 
 	It("scans and collect lines", func() {
 		go func() {
-			_, _ = fmt.Fprintln(w, "Hello World")
-			_, _ = fmt.Fprintln(w, "New World")
+			_, _ = fmt.Fprintln(writer, "Hello World")
+			_, _ = fmt.Fprintln(writer, "New World")
 		}()
 
-		Eventually(store.List).Should(SatisfyAll(
+		Eventually(store.List, "5s", "0.5s").Should(SatisfyAll(
 			HaveLen(2),
-			ContainElements(
-				WithTransform(func(l logentry.Log) string { return l.Line }, Equal("Hello World")),
-				WithTransform(func(l logentry.Log) string { return l.Line }, Equal("New World")),
-			),
+			WithTransform(func(logs []logentry.Log) []string {
+				var lines []string
+				for _, log := range logs {
+					lines = append(lines, log.Line)
+				}
+				return lines
+			}, Equal([]string{"Hello World", "New World"})),
 		))
 	})
 
 	It("filters logs based on case-insensitive search", func() {
 		go func() {
-			_, _ = fmt.Fprintln(w, "Hello World")
-			_, _ = fmt.Fprintln(w, "New World")
-			_, _ = fmt.Fprintln(w, "Another Line")
+			_, _ = fmt.Fprintln(writer, "Hello World")
+			_, _ = fmt.Fprintln(writer, "New World")
+			_, _ = fmt.Fprintln(writer, "Another Line")
 		}()
 
 		Eventually(store.List).Should(HaveLen(3))
@@ -63,8 +65,8 @@ var _ = Describe("InMemoryLogsStore", func() {
 		client := store.LineFor("foo")
 
 		go func() {
-			_, _ = fmt.Fprintln(w, "Hello World")
-			_, _ = fmt.Fprintln(w, "New World")
+			_, _ = fmt.Fprintln(writer, "Hello World")
+			_, _ = fmt.Fprintln(writer, "New World")
 		}()
 
 		Eventually(client).Should(Receive(
@@ -78,7 +80,7 @@ var _ = Describe("InMemoryLogsStore", func() {
 		clientB := store.LineFor("client B")
 
 		go func() {
-			_, _ = fmt.Fprintln(w, "Hello World")
+			_, _ = fmt.Fprintln(writer, "Hello World")
 		}()
 
 		logsCh := make(chan string)
@@ -101,7 +103,7 @@ var _ = Describe("InMemoryLogsStore", func() {
 
 	It("removes client when disconnecting", func() {
 		go func() {
-			_, _ = fmt.Fprintln(w, "Hello World")
+			_, _ = fmt.Fprintln(writer, "Hello World")
 		}()
 
 		Eventually(store.LineFor("client A")).Should(Receive(
@@ -116,9 +118,9 @@ var _ = Describe("InMemoryLogsStore", func() {
 		store.SetFilter("world")
 
 		go func() {
-			_, _ = fmt.Fprintln(w, "Hello World")
-			_, _ = fmt.Fprintln(w, "Another Line")
-			_, _ = fmt.Fprintln(w, "New World")
+			_, _ = fmt.Fprintln(writer, "Hello World")
+			_, _ = fmt.Fprintln(writer, "Another Line")
+			_, _ = fmt.Fprintln(writer, "New World")
 		}()
 
 		Eventually(func(g Gomega) {
