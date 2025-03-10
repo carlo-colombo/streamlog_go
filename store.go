@@ -146,8 +146,23 @@ func (s *SQLiteLogsStore) List() []logentry.Log {
 	var args []interface{}
 
 	if s.filter != "" {
-		query = "SELECT line, timestamp FROM logs WHERE LOWER(line) LIKE LOWER(?) ORDER BY id ASC"
-		args = []interface{}{"%" + s.filter + "%"}
+		// Use REPLACE to add ANSI highlighting to matched terms
+		query = `
+			SELECT 
+				REPLACE(
+					REPLACE(
+						line,
+						LOWER(?),
+						CHAR(27) || '[43m' || LOWER(?) || CHAR(27) || '[0m'
+					),
+					UPPER(?),
+					CHAR(27) || '[43m' || UPPER(?) || CHAR(27) || '[0m'
+				) as line,
+				timestamp 
+			FROM logs 
+			WHERE LOWER(line) LIKE LOWER(?) 
+			ORDER BY id ASC`
+		args = []interface{}{s.filter, s.filter, s.filter, s.filter, "%" + s.filter + "%"}
 	} else {
 		query = "SELECT line, timestamp FROM logs ORDER BY id ASC"
 	}

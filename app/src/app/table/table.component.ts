@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { NgFor } from '@angular/common';
+import { AnsiPipe } from './ansi.pipe';
 
 interface LogEntry {
   line: string;
@@ -9,7 +10,7 @@ interface LogEntry {
 @Component({
   selector: 'app-table',
   standalone: true,
-  imports: [NgFor],
+  imports: [NgFor, AnsiPipe],
   templateUrl: './table.component.html',
   styleUrls: ['./table.component.css']
 })

@@ -2,7 +2,7 @@
   <table>
     <tr *ngFor="let log of logs">
       <td class="timestamp">{{formatTimestamp(log.timestamp)}}</td>
-      <td class="message">{{log.line}}</td>
+      <td class="message" [innerHTML]="log.line | ansi"></td>
     </tr>
   </table>
 </div> 

@@ -55,4 +55,6 @@ h1, h2, h3, h4, h5, h6 {
   --color-background-even: #f8f9fa;
   --color-background-odd: #ffffff;
   --color-shadow-focus: rgba(0,123,255,0.25);
+  --color-highlight: #95fff4;
+  --ansi-yellow: var(--color-highlight);
 }
